@@ -1,15 +1,24 @@
 """backend URL Configuration"""
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework.schemas import get_schema_view
-from django.views.generic import TemplateView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("simpleMusicService.urls")),
-
-    path("openapi/", get_schema_view(title="Simple music service"), name="openapi_schema"),
-    path("docs/", TemplateView.as_view(template_name="documentation.html",
-                                       extra_context={"schema_url": "openapi_schema"}),
-         name="swagger-ui"),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/schema/swagger-ui/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/schema/redoc/",
+        SpectacularRedocView.as_view(url_name="schema"),
+        name="redoc",
+    ),
 ]

@@ -1,10 +1,11 @@
-from django.urls import path
-from rest_framework.urlpatterns import format_suffix_patterns
-from .views import SongListView, SongDetailView
+from django.urls import path, include
+from rest_framework import routers
+from .views import SongViewSet
+
+router = routers.DefaultRouter()
+router.register(r"songs", SongViewSet)
 
 urlpatterns = [
-    path("songs/", SongListView.as_view()),
-    path("songs/<int:pk>", SongDetailView.as_view()),
+    path("", include(router.urls)),
+    path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]
-
-urlpatterns = format_suffix_patterns(urlpatterns)
