@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
-    "simpleMusicService",
+    "simple_music_service",
 ]
 
 MIDDLEWARE = [

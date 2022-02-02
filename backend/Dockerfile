@@ -4,7 +4,10 @@ ENV PYTHONPATH=${PYTHONPATH}:${PWD}
 
 COPY . .
 
-RUN pip3 install poetry
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+
+ENV PATH="${PATH}:/root/.poetry/bin"
+
 RUN poetry config virtualenvs.create false
 RUN poetry install --no-dev
 
