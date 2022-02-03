@@ -1,0 +1,7 @@
+.venv
+poetry.lock
+
+.idea
+
+Dockerfile
+.dockerignore

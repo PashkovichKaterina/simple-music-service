@@ -1,0 +1,39 @@
+version: "3"
+
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_DB=test
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "8080:5432"
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+
+  backend:
+    build: backend/
+    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_NAME=test
+      - DB_USER=admin
+      - DB_PASS=admin
+      - DB_HOST=db
+    depends_on:
+      - db
+
+  frontend:
+    build: frontend/
+    command: npm start
+    volumes:
+      - ./:/app
+      - /app/frontend/node_modules
+    ports:
+      - "3000:3000"
+    links:
+      - backend
