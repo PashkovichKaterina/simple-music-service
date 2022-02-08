@@ -1,9 +1,10 @@
 from django.urls import path, include
 from rest_framework import routers
-from .views import SongViewSet
+from .views import SongViewSet, ArtistViewSet
 
 router = routers.DefaultRouter()
 router.register(r"songs", SongViewSet)
+router.register(r"artists", ArtistViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),

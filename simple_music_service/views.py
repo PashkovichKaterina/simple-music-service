@@ -1,8 +1,13 @@
 from rest_framework import viewsets
-from . import serializers
-from .models import Song
+from .serializers import SongSerializer, ArtistSerializer
+from .models import Song, Artist
 
 
 class SongViewSet(viewsets.ModelViewSet):
     queryset = Song.objects.all()
-    serializer_class = serializers.SongSerializer
+    serializer_class = SongSerializer
+
+
+class ArtistViewSet(viewsets.ModelViewSet):
+    queryset = Artist.objects.all()
+    serializer_class = ArtistSerializer
