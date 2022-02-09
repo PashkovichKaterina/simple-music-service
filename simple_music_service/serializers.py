@@ -4,16 +4,18 @@ from django.contrib.auth.models import User
 from .models import Song, Artist
 
 
-class SongSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Song
-        fields = ["id", "title", "artist", "year", "location"]
-
-
 class ArtistSerializer(serializers.ModelSerializer):
     class Meta:
         model = Artist
         fields = ["id", "name"]
+
+
+class SongSerializer(serializers.ModelSerializer):
+    artist = ArtistSerializer(many=True)
+
+    class Meta:
+        model = Song
+        fields = ["id", "title", "artist", "year", "location"]
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
