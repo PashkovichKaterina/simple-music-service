@@ -6,24 +6,32 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('simple_music_service', '0001_initial'),
+        ("simple_music_service", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Artist',
+            name="Artist",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=50)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=50)),
             ],
         ),
         migrations.RemoveField(
-            model_name='song',
-            name='artist',
+            model_name="song",
+            name="artist",
         ),
         migrations.AddField(
-            model_name='song',
-            name='artist',
-            field=models.ManyToManyField(to='simple_music_service.Artist'),
+            model_name="song",
+            name="artist",
+            field=models.ManyToManyField(to="simple_music_service.Artist"),
         ),
     ]

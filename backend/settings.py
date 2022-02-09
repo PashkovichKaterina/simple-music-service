@@ -15,7 +15,10 @@ SECRET_KEY = "django-insecure-!1*r80z^756lqc&4lx^wii@7v9kp6!s0q(du51+a9qu53y&k@@
 # SECURITY WARNING: don"t run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS: List[str] = ["backend-service.us-west-2.elasticbeanstalk.com", "127.0.0.1"]
+ALLOWED_HOSTS: List[str] = [
+    "backend-service.us-west-2.elasticbeanstalk.com",
+    "127.0.0.1",
+]
 
 # Application definition
 
@@ -125,7 +128,7 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ]
+    ],
 }
 
 SPECTACULAR_SETTINGS = {
@@ -133,16 +136,16 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Simple music service where users can listen to music and create playlists",
 }
 
-CORS_ALLOWED_ORIGINS = ["http://simple-music-service.com.s3-website-us-east-1.amazonaws.com"]
+CORS_ALLOWED_ORIGINS = [
+    "http://simple-music-service.com.s3-website-us-east-1.amazonaws.com"
+]
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
-
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
-
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION"
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
 }

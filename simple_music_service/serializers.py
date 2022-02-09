@@ -34,7 +34,7 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "password": {"write_only": True},
             "first_name": {"required": False},
-            "last_name": {"required": False}
+            "last_name": {"required": False},
         }
 
     def create(self, *args, **kwargs):

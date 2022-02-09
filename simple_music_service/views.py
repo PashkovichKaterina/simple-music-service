@@ -3,7 +3,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth.models import User
-from .serializers import SongSerializer, ArtistSerializer, MyTokenObtainPairSerializer, UserSerializer
+from .serializers import (
+    SongSerializer,
+    ArtistSerializer,
+    MyTokenObtainPairSerializer,
+    UserSerializer,
+)
 from .models import Song, Artist
 
 
@@ -30,4 +35,6 @@ class SignupAPIView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user, context=self.get_serializer_context()).data)
+        return Response(
+            UserSerializer(user, context=self.get_serializer_context()).data
+        )
