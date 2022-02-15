@@ -40,14 +40,14 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, *args, **kwargs):
-        user = super().create(*args, **kwargs)
-        password = user.password
-        user.set_password(password)
-        user.save()
-        return user
+        return self.__save_user(super().create, *args, **kwargs)
 
     def update(self, *args, **kwargs):
-        user = super().update(*args, **kwargs)
+        return self.__save_user(super().update, *args, **kwargs)
+
+    @staticmethod
+    def __save_user(method, *args, **kwargs):
+        user = method(*args, **kwargs)
         password = user.password
         user.set_password(password)
         user.save()

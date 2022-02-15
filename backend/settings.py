@@ -31,11 +31,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "corsheaders",
     "drf_spectacular",
     "simple_music_service",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -137,12 +140,12 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://simple-music-service.com.s3-website-us-east-1.amazonaws.com"
+    os.environ["ALLOWED_ORIGINS"]
 ]
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=float(os.environ["ACCESS_TOKEN_LIFETIME_IN_MINUTES"])),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=float(os.environ["REFRESH_TOKEN_LIFETIME_IN_DAYS"])),
     "ROTATE_REFRESH_TOKENS": True,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
