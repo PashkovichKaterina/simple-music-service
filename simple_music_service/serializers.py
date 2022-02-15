@@ -17,6 +17,13 @@ class SongSerializer(serializers.ModelSerializer):
         model = Song
         fields = ["id", "title", "artist", "year", "location"]
 
+    def create(self, validated_data):
+        user_id = self.context["request"].user.id
+        validated_data["user_id"] = user_id
+        song = super().create(validated_data)
+        song.save()
+        return song
+
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
