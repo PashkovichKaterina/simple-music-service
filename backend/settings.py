@@ -162,3 +162,5 @@ AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = "public-read"
 AWS_S3_VERIFY = True
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = os.environ["FILE_UPLOAD_MAX_MEMORY_SIZE"]

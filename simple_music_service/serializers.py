@@ -11,16 +11,26 @@ class ArtistSerializer(serializers.ModelSerializer):
 
 
 class SongSerializer(serializers.ModelSerializer):
-    artist = ArtistSerializer(many=True)
+    artist = ArtistSerializer(many=True, read_only=True)
+    artist_list = serializers.ListSerializer(
+        child=serializers.CharField(max_length=50), write_only=True
+    )
 
     class Meta:
         model = Song
-        fields = ["id", "title", "artist", "year", "location"]
+        fields = ["id", "title", "year", "artist", "artist_list", "location"]
 
     def create(self, validated_data):
         user_id = self.context["request"].user.id
         validated_data["user_id"] = user_id
-        song = super().create(validated_data)
+        artist_list = validated_data.pop("artist_list")
+        song = Song.objects.create(**validated_data)
+        for artist_name in artist_list:
+            try:
+                artist = Artist.objects.get(name=artist_name)
+            except Artist.DoesNotExist:
+                artist = Artist.objects.create(name=artist_name)
+            song.artist.add(artist)
         song.save()
         return song
 
