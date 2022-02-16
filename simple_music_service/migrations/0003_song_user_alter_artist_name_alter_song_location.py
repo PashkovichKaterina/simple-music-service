@@ -10,24 +10,35 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('simple_music_service', '0002_artist_remove_song_artist_song_artist'),
+        ("simple_music_service", "0002_artist_remove_song_artist_song_artist"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='song',
-            name='user',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            model_name="song",
+            name="user",
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL,
+            ),
             preserve_default=False,
         ),
         migrations.AlterField(
-            model_name='artist',
-            name='name',
+            model_name="artist",
+            name="name",
             field=models.CharField(max_length=50, unique=True),
         ),
         migrations.AlterField(
-            model_name='song',
-            name='location',
-            field=models.FileField(upload_to='', validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['mp3'])]),
+            model_name="song",
+            name="location",
+            field=models.FileField(
+                upload_to="",
+                validators=[
+                    django.core.validators.FileExtensionValidator(
+                        allowed_extensions=["mp3"]
+                    )
+                ],
+            ),
         ),
     ]
