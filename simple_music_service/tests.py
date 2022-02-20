@@ -3,8 +3,11 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from django.contrib.auth.models import User
 from django.urls import reverse
-from .serializers import ArtistSerializer
-from .test_factories import ArtistFactory, UserFactory
+from django.core.files.uploadedfile import SimpleUploadedFile
+from moto import mock_s3
+import boto3
+from .serializers import ArtistSerializer, SongSerializer
+from .test_factories import ArtistFactory, UserFactory, SongFactory
 from .models import Artist
 
 
@@ -68,9 +71,12 @@ class SignUpViewSetTest(APITestCase):
 
 
 class TokenViewSetTest(APITestCase):
-    def test_can_user_sign_in(self):
-        self.client.post(reverse("signup-list"), self.payload)
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = UserFactory.create()
+        cls.payload = {"username": cls.user.username, "password": "test password"}
 
+    def test_can_user_sign_in(self):
         response = self.client.post(reverse("token"), self.payload)
         signin_user = User.objects.get(username=self.payload["username"])
 
@@ -78,7 +84,6 @@ class TokenViewSetTest(APITestCase):
         self.assert_tokens_claims(response, signin_user)
 
     def test_can_user_refresh_token(self):
-        self.client.post(reverse("signup-list"), self.payload)
         response = self.client.post(reverse("token"), self.payload)
         signin_user = User.objects.get(username=self.payload["username"])
 
@@ -87,10 +92,6 @@ class TokenViewSetTest(APITestCase):
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assert_tokens_claims(response, signin_user)
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.payload = {"username": "testUsername", "password": "test password"}
 
     def assert_tokens_claims(self, response, signin_user):
         self.assertIn("access", response.data.keys())
@@ -107,3 +108,63 @@ class TokenViewSetTest(APITestCase):
         self.assertEqual(
             signin_user.username, RefreshToken(response.data["refresh"])["username"]
         )
+
+
+class SongViewSetTest(APITestCase):
+    @classmethod
+    @mock_s3
+    def setUpTestData(cls):
+        cls.bucket_name = "simple-music-service-storage"
+        s3 = boto3.resource("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=cls.bucket_name)
+
+        cls.songs = SongFactory.create_batch(size=3)
+        cls.song = cls.songs[0]
+        cls.user = UserFactory.create()
+
+    def test_can_browse_all_songs(self):
+        response = self.client.get(reverse("song-list"))
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(self.songs), len(response.data))
+        for song in self.songs:
+            self.assertIn(SongSerializer(instance=song).data, response.data)
+
+    def test_can_read_a_specific_song(self):
+        response = self.client.get(reverse("song-detail", args=[self.song.id]))
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(SongSerializer(instance=self.song).data, response.data)
+
+    @mock_s3
+    def test_can_add_a_new_artist(self):
+        access = AccessToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+        s3 = boto3.resource("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=self.bucket_name)
+
+        file_name = "test-song.mp3"
+        file_body = "test file body"
+        payload = {
+            "title": "test song title",
+            "year": "2020-12-12",
+            "artist_list[0]": "test artist name",
+            "location": SimpleUploadedFile(file_name, bytes(file_body, "utf-8"))
+        }
+        response = self.client.post(reverse("song-list"), payload)
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        body = s3.Object(self.bucket_name, file_name).get()["Body"].read().decode("utf-8")
+        self.assertEqual(body, file_body)
+
+    def test_can_browse_all_user_songs(self):
+        user_id = self.song.user_id
+        user_songs = list(filter(lambda song: song.user_id == user_id, self.songs))
+
+        response = self.client.get(reverse("nested-song-list", args=[user_id]))
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(user_songs), len(response.data))
+        for song in user_songs:
+            self.assertIn(SongSerializer(instance=song).data, response.data)

@@ -1,5 +1,5 @@
 from factory.django import DjangoModelFactory, FileField
-from factory import Sequence, SubFactory, post_generation
+from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall
 from django.contrib.auth.models import User
 from .models import Artist, Song
 
@@ -16,7 +16,7 @@ class UserFactory(DjangoModelFactory):
         model = User
 
     username = Sequence(lambda n: f"username{n}")
-    password = Sequence(lambda n: f"password{n}")
+    password = PostGenerationMethodCall("set_password", "test password")
 
 
 class SongFactory(DjangoModelFactory):
