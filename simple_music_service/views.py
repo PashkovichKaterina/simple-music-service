@@ -1,19 +1,24 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from .serializers import (
     SongSerializer,
     ArtistSerializer,
     MyTokenObtainPairSerializer,
     UserSerializer,
+    PlaylistSerializer
 )
-from .models import Song, Artist
+from .models import Song, Artist, Playlist
+from .permissions import IsOwner
 
 
 class SongViewSet(viewsets.ModelViewSet):
     queryset = Song.objects.all()
     serializer_class = SongSerializer
+    http_method_names = ["get"]
 
 
 class NestedSongViewSet(viewsets.ModelViewSet):
@@ -22,6 +27,11 @@ class NestedSongViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Song.objects.filter(user=self.kwargs["users_pk"])
+
+    def retrieve(self, request, pk=None, users_pk=None):
+        item = get_object_or_404(self.queryset, pk=pk, user=users_pk)
+        serializer = self.get_serializer(item)
+        return Response(serializer.data)
 
 
 class ArtistViewSet(viewsets.ModelViewSet):
@@ -43,3 +53,17 @@ class SignupViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+
+class PlaylistViewSet(viewsets.ModelViewSet):
+    queryset = Playlist.objects.all()
+    serializer_class = PlaylistSerializer
+    permission_classes = (IsOwner,)
+
+    def get_queryset(self):
+        return Playlist.objects.filter(user=self.kwargs["users_pk"])
+
+    def retrieve(self, request, pk=None, users_pk=None):
+        item = get_object_or_404(self.queryset, pk=pk, user=users_pk)
+        serializer = self.get_serializer(item)
+        return Response(serializer.data)
