@@ -26,13 +26,13 @@ class ArtistViewSetTest(APITestCase):
         for artist in self.artists:
             self.assertIn(ArtistSerializer(instance=artist).data, response.data)
 
-    def test_can_read_a_specific_artist(self):
+    def test_can_read_specific_artist(self):
         response = self.client.get(reverse("artist-detail", args=[self.artist.id]))
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(ArtistSerializer(instance=self.artist).data, response.data)
 
-    def test_can_add_a_new_artist(self):
+    def test_can_add_new_artist(self):
         self.authorization()
 
         payload = {"name": "artist test name"}
@@ -44,7 +44,7 @@ class ArtistViewSetTest(APITestCase):
             self.assertEqual(value, response.data[key])
             self.assertEqual(value, getattr(created_artist, key))
 
-    def test_can_delete_an_artist(self):
+    def test_can_delete_artist(self):
         self.authorization()
 
         response = self.client.delete(reverse("artist-detail", args=[self.artist.id]))
@@ -130,14 +130,14 @@ class SongViewSetTest(APITestCase):
         for song in self.songs:
             self.assertIn(SongSerializer(instance=song).data, response.data)
 
-    def test_can_read_a_specific_song(self):
+    def test_can_read_specific_song(self):
         response = self.client.get(reverse("song-detail", args=[self.song.id]))
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(SongSerializer(instance=self.song).data, response.data)
 
     @mock_s3
-    def test_can_add_a_new_artist(self):
+    def test_can_add_new_song(self):
         access = AccessToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
 
