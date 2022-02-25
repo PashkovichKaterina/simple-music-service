@@ -31,11 +31,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "corsheaders",
     "drf_spectacular",
     "simple_music_service",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -123,7 +126,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly"
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly"
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -137,15 +140,25 @@ SPECTACULAR_SETTINGS = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://simple-music-service.com.s3-website-us-east-1.amazonaws.com"
+    os.environ["ALLOWED_ORIGINS"]
 ]
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=float(os.environ["ACCESS_TOKEN_LIFETIME_IN_MINUTES"])),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=float(os.environ["REFRESH_TOKEN_LIFETIME_IN_DAYS"])),
     "ROTATE_REFRESH_TOKENS": True,
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
 }
+
+AWS_STORAGE_BUCKET_NAME = os.environ["AWS_STORAGE_BUCKET_NAME"]
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_REGION_NAME = os.environ["AWS_S3_REGION_NAME"]
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = "public-read"
+AWS_S3_VERIFY = True
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = os.environ["FILE_UPLOAD_MAX_MEMORY_SIZE"]

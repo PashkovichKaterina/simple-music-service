@@ -16,6 +16,14 @@ class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
 
 
+class NestedSongViewSet(viewsets.ModelViewSet):
+    queryset = Song.objects.all()
+    serializer_class = SongSerializer
+
+    def get_queryset(self):
+        return Song.objects.filter(user=self.kwargs["users_pk"])
+
+
 class ArtistViewSet(viewsets.ModelViewSet):
     queryset = Artist.objects.all()
     serializer_class = ArtistSerializer
@@ -30,3 +38,8 @@ class SignupViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     http_method_names = ["post"]
     permission_classes = (AllowAny,)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
