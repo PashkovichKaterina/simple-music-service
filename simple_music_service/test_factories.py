@@ -1,7 +1,7 @@
 from factory.django import DjangoModelFactory, FileField
 from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall
 from django.contrib.auth.models import User
-from .models import Artist, Song
+from .models import Artist, Song, Playlist
 
 
 class ArtistFactory(DjangoModelFactory):
@@ -33,3 +33,17 @@ class SongFactory(DjangoModelFactory):
         if not create or not extracted:
             return
         self.artist.add(*extracted)
+
+
+class PlaylistFactory(DjangoModelFactory):
+    class Meta:
+        model = Playlist
+
+    title = Sequence(lambda n: f"playlist title {n}")
+    user = SubFactory(UserFactory)
+
+    @post_generation
+    def song(self, create, extracted):
+        if not create or not extracted:
+            return
+        self.song.add(*extracted)
