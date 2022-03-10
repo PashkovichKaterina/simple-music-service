@@ -1,4 +1,4 @@
-from rest_framework.test import APITestCase, APIClient
+from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from django.contrib.auth.models import User
@@ -163,6 +163,26 @@ class SongViewSetTest(APITestCase):
         for song in user_songs:
             self.assertIn(SongSerializer(instance=song).data, response.data)
 
+    def test_can_search_songs_by_title_or_artist_name(self):
+        search_string = "title"
+        response = self.client.get(reverse("song-list"), {"search": search_string})
+
+        searched_songs = list(
+            filter(lambda song: search_string in song.title or search_string in self.get_artist_name(song), self.songs)
+        )
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(searched_songs), len(response.data))
+        for song in searched_songs:
+            self.assertIn(SongSerializer(instance=song).data, response.data)
+
+    @staticmethod
+    def get_artist_name(song):
+        result = []
+        for artist in song.artist.all():
+            result.append(artist.name)
+        return "".join(result)
+
 
 class PlaylistViewSetTest(APITestCase):
     @classmethod
@@ -260,6 +280,19 @@ class PlaylistViewSetTest(APITestCase):
 
         self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
         self.assertFalse(Playlist.objects.filter(pk=user_playlist.id))
+
+    def test_can_search_playlist_by_title(self):
+        authorization(self.client, self.user)
+
+        search_title = "playlist"
+        response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"search": search_title})
+
+        search_playlists = list(filter(lambda playlist: playlist.title.startswith(search_title), self.user_playlists))
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(search_playlists), len(response.data))
+        for playlist in search_playlists:
+            self.assertIn(PlaylistSerializer(instance=playlist).data, response.data)
 
 
 def authorization(client, user):
