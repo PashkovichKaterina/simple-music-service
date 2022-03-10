@@ -15,3 +15,9 @@ class Song(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=["mp3"])]
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+
+class Playlist(models.Model):
+    title = models.CharField(max_length=50)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    song = models.ManyToManyField(Song)

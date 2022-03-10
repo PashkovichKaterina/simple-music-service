@@ -8,6 +8,7 @@ from .views import (
     SignupViewSet,
     UserViewSet,
     NestedSongViewSet,
+    PlaylistViewSet
 )
 
 router = routers.DefaultRouter()
@@ -18,6 +19,7 @@ router.register(r"signup", SignupViewSet, basename="signup")
 
 users_router = routers.NestedSimpleRouter(router, r"users", lookup="users")
 users_router.register(r"songs", NestedSongViewSet, basename="nested-song")
+users_router.register(r"playlists", PlaylistViewSet, basename="playlist")
 
 urlpatterns = [
     path("", include(router.urls)),

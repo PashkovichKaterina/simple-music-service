@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
-from .models import Song, Artist
+from .models import Song, Artist, Playlist
 
 
 class ArtistSerializer(serializers.ModelSerializer):
@@ -69,3 +69,47 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+
+class PlaylistSongSerializer(serializers.ModelSerializer):
+    artist = ArtistSerializer(many=True, read_only=True)
+    id = serializers.IntegerField()
+
+    class Meta:
+        model = Song
+        fields = ["id", "title", "year", "artist", "location"]
+        extra_kwargs = {
+            "title": {"read_only": True},
+            "year": {"read_only": True},
+            "location": {"read_only": True},
+        }
+
+
+class PlaylistSerializer(serializers.ModelSerializer):
+    song = PlaylistSongSerializer(many=True)
+
+    class Meta:
+        model = Playlist
+        fields = ["id", "title", "song"]
+
+    def create(self, validated_data):
+        user_id = self.context["request"].user.id
+        validated_data["user_id"] = user_id
+        song_data = validated_data.pop("song")
+        playlist = Playlist.objects.create(**validated_data)
+        self.__save_song(playlist, song_data)
+        return playlist
+
+    def update(self, instance, validated_data):
+        song_data = validated_data.pop("song")
+        instance = super().update(instance, validated_data)
+        instance.song.clear()
+        self.__save_song(instance, song_data)
+        return instance
+
+    @staticmethod
+    def __save_song(instance, song_data):
+        for song in song_data:
+            song = Song.objects.get(**song)
+            instance.song.add(song)
+        instance.save()
