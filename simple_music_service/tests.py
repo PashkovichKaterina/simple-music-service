@@ -215,7 +215,7 @@ class PlaylistViewSetTest(APITestCase):
         self.assertEqual(len(payload["song"]), len(response.data["song"]))
         self.assertEqual(payload["title"], created_playlist.title)
         self.assertEqual(len(payload["song"]), len(created_playlist.song.all()))
-        for i in range(0, len(payload["song"])):
+        for i, payload_song in enumerate(payload["song"]):
             self.assertEqual(payload["song"][i]["id"], response.data["song"][i]["id"])
             self.assertEqual(payload["song"][i]["id"], created_playlist.song.all()[i].id)
 
