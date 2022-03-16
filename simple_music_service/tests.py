@@ -183,6 +183,35 @@ class SongViewSetTest(APITestCase):
             result.append(artist.name)
         return "".join(result)
 
+    sorting_params = {
+        "Sorting by year(newest to oldest)": ("-year", lambda song: song.year, True),
+        "Sorting by year(oldest to newest)": ("year", lambda song: song.year, False),
+        "Sorting by title(A to Z)": ("title", lambda song: song.title, False),
+        "Sorting by title(Z to A)": ("-title", lambda song: song.title, True)
+    }
+
+    def test_can_sorting_songs(self):
+        for ordering, sorted_key, reverse_flag in self.sorting_params.values():
+            with self.subTest(ordering=ordering, sorted_key=sorted_key, reverse_flag=reverse_flag):
+                response = self.client.get(reverse("song-list"), {"ordering": ordering})
+                sorting_songs = sorted(self.songs, key=sorted_key, reverse=reverse_flag)
+                self.assert_sorting_result(sorting_songs, response)
+
+    def test_can_sorting_user_songs(self):
+        for ordering, sorted_key, reverse_flag in self.sorting_params.values():
+            with self.subTest(ordering=ordering, sorted_key=sorted_key, reverse_flag=reverse_flag):
+                user_id = self.song.user_id
+                response = self.client.get(reverse("nested-song-list", args=[user_id]), {"ordering": ordering})
+                user_songs = [song for song in self.songs if song.user_id == user_id]
+                sorting_songs = sorted(user_songs, key=sorted_key, reverse=reverse_flag)
+                self.assert_sorting_result(sorting_songs, response)
+
+    def assert_sorting_result(self, sorting_songs, response):
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(sorting_songs), len(response.data))
+        for (sorting_song, response_song) in zip(sorting_songs, response.data):
+            self.assertEqual(SongSerializer(instance=sorting_song).data["id"], response_song["id"])
+
 
 class PlaylistViewSetTest(APITestCase):
     @classmethod
@@ -293,6 +322,24 @@ class PlaylistViewSetTest(APITestCase):
         self.assertEqual(len(search_playlists), len(response.data))
         for playlist in search_playlists:
             self.assertIn(PlaylistSerializer(instance=playlist).data, response.data)
+
+    def test_can_sorting_playlists(self):
+        sorting_params = {
+            "Sorting by title(A to Z)": ("title", False),
+            "Sorting by title(Z to A)": ("-title", True)
+        }
+        for ordering, reverse_flag in sorting_params.values():
+            with self.subTest(ordering=ordering, reverse_flag=reverse_flag):
+                authorization(self.client, self.user)
+
+                response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"ordering": ordering})
+                sorting_playlists = sorted(self.user_playlists, key=lambda playlist: playlist.title,
+                                           reverse=reverse_flag)
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(len(sorting_playlists), len(response.data))
+                for (sorting_playlist, response_playlist) in zip(sorting_playlists, response.data):
+                    self.assertEqual(PlaylistSerializer(instance=sorting_playlist).data["id"], response_playlist["id"])
 
 
 def authorization(client, user):
