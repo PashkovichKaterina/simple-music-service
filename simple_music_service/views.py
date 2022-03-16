@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import SearchFilter, OrderingFilter
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from .serializers import (
@@ -20,8 +20,10 @@ class SongViewSet(viewsets.ModelViewSet):
     queryset = Song.objects.all()
     serializer_class = SongSerializer
     http_method_names = ["get"]
-    filter_backends = [SearchFilter]
+    filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ["title", "artist__name"]
+    ordering_fields = ["title", "year"]
+    ordering = ["-year"]
 
 
 class NestedSongViewSet(SongViewSet):
@@ -62,8 +64,10 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     queryset = Playlist.objects.all()
     serializer_class = PlaylistSerializer
     permission_classes = (IsOwner,)
-    filter_backends = [SearchFilter]
+    filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ["^title"]
+    ordering_fields = ["title"]
+    ordering = ["title"]
 
     def get_queryset(self):
         return Playlist.objects.filter(user=self.kwargs["users_pk"])
