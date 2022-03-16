@@ -14,6 +14,7 @@ from .serializers import (
 )
 from .models import Song, Artist, Playlist
 from .permissions import IsOwner
+from .paginations import PageNumberAndPageSizePagination
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -21,6 +22,7 @@ class SongViewSet(viewsets.ModelViewSet):
     serializer_class = SongSerializer
     http_method_names = ["get"]
     filter_backends = [SearchFilter, OrderingFilter]
+    pagination_class = PageNumberAndPageSizePagination
     search_fields = ["title", "artist__name"]
     ordering_fields = ["title", "year"]
     ordering = ["-year"]
@@ -65,6 +67,7 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     serializer_class = PlaylistSerializer
     permission_classes = (IsOwner,)
     filter_backends = [SearchFilter, OrderingFilter]
+    pagination_class = PageNumberAndPageSizePagination
     search_fields = ["^title"]
     ordering_fields = ["title"]
     ordering = ["title"]
