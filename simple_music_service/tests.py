@@ -113,7 +113,7 @@ class SongViewSetTest(APITestCase):
         s3 = boto3.resource("s3", region_name="us-east-1")
         s3.create_bucket(Bucket=cls.bucket_name)
 
-        cls.songs = SongFactory.create_batch(size=3)
+        cls.songs = SongFactory.create_batch(size=5)
         cls.song = cls.songs[0]
         cls.user = UserFactory.create()
 
@@ -212,6 +212,17 @@ class SongViewSetTest(APITestCase):
         self.assertEqual(len(sorting_songs), len(response.data))
         for (sorting_song, response_song) in zip(sorting_songs, response.data):
             self.assertEqual(SongSerializer(instance=sorting_song).data["id"], response_song["id"])
+
+    def test_can_paginate_songs(self):
+        pagination_params = [(1, 3, 3), (2, 3, 2), (1, 8, 5)]
+        for page, page_size, results_len in pagination_params:
+            with self.subTest(page=page, page_size=page_size, results_len=results_len):
+                response = self.client.get(reverse("song-list"), {"page": page, "page_size": page_size})
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(results_len, len(response.data["results"]))
+                for song in self.songs[(page - 1) * page_size:page * page_size]:
+                    self.assertIn(SongSerializer(instance=song).data, response.data["results"])
 
 
 class PlaylistViewSetTest(APITestCase):
@@ -344,6 +355,21 @@ class PlaylistViewSetTest(APITestCase):
                 self.assertEqual(len(sorting_playlists), len(response.data))
                 for (sorting_playlist, response_playlist) in zip(sorting_playlists, response.data):
                     self.assertEqual(PlaylistSerializer(instance=sorting_playlist).data["id"], response_playlist["id"])
+
+    def test_can_paginate_playlists(self):
+        authorization(self.client, self.user)
+
+        pagination_params = [(1, 3, 3), (1, 2, 2), (2, 2, 1)]
+        for page, page_size, results_len in pagination_params:
+            with self.subTest(page=page, page_size=page_size, results_len=results_len):
+                response = self.client.get(reverse("playlist-list", args=[self.user.id]),
+                                           {"page": page, "page_size": page_size})
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(results_len, len(response.data["results"]))
+                self.assertEqual(len(self.user_playlists), response.data["count"])
+                for playlist in self.user_playlists[(page - 1) * page_size: page * page_size]:
+                    self.assertIn(PlaylistSerializer(instance=playlist).data, response.data["results"])
 
 
 def authorization(client, user):
