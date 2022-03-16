@@ -164,17 +164,18 @@ class SongViewSetTest(APITestCase):
             self.assertIn(SongSerializer(instance=song).data, response.data)
 
     def test_can_search_songs_by_title_or_artist_name(self):
-        search_string = "title"
-        response = self.client.get(reverse("song-list"), {"search": search_string})
+        search_params = ["title", "test title", "artist name", "song artist"]
+        for search_string in search_params:
+            with self.subTest(search_string=search_string):
+                response = self.client.get(reverse("song-list"), {"search": search_string})
 
-        searched_songs = list(
-            filter(lambda song: search_string in song.title or search_string in self.get_artist_name(song), self.songs)
-        )
+                searched_songs = [song for song in self.songs
+                                  if search_string in song.title or search_string in self.get_artist_name(song)]
 
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(len(searched_songs), len(response.data))
-        for song in searched_songs:
-            self.assertIn(SongSerializer(instance=song).data, response.data)
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(len(searched_songs), len(response.data))
+                for song in searched_songs:
+                    self.assertIn(SongSerializer(instance=song).data, response.data)
 
     @staticmethod
     def get_artist_name(song):
@@ -313,15 +314,18 @@ class PlaylistViewSetTest(APITestCase):
     def test_can_search_playlist_by_title(self):
         authorization(self.client, self.user)
 
-        search_title = "playlist"
-        response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"search": search_title})
+        search_params = ["playlist", "title", "test title"]
+        for search_title in search_params:
+            with self.subTest(search_params=search_params):
+                response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"search": search_title})
 
-        search_playlists = list(filter(lambda playlist: playlist.title.startswith(search_title), self.user_playlists))
+                search_playlists = [playlist for playlist in self.user_playlists
+                                    if playlist.title.startswith(search_title)]
 
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(len(search_playlists), len(response.data))
-        for playlist in search_playlists:
-            self.assertIn(PlaylistSerializer(instance=playlist).data, response.data)
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(len(search_playlists), len(response.data))
+                for playlist in search_playlists:
+                    self.assertIn(PlaylistSerializer(instance=playlist).data, response.data)
 
     def test_can_sorting_playlists(self):
         sorting_params = {
