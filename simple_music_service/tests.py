@@ -113,7 +113,7 @@ class SongViewSetTest(APITestCase):
         s3 = boto3.resource("s3", region_name="us-east-1")
         s3.create_bucket(Bucket=cls.bucket_name)
 
-        cls.songs = SongFactory.create_batch(size=3)
+        cls.songs = SongFactory.create_batch(size=5)
         cls.song = cls.songs[0]
         cls.user = UserFactory.create()
 
@@ -164,17 +164,18 @@ class SongViewSetTest(APITestCase):
             self.assertIn(SongSerializer(instance=song).data, response.data)
 
     def test_can_search_songs_by_title_or_artist_name(self):
-        search_string = "title"
-        response = self.client.get(reverse("song-list"), {"search": search_string})
+        search_params = ["title", "test title", "artist name", "song artist"]
+        for search_string in search_params:
+            with self.subTest(search_string=search_string):
+                response = self.client.get(reverse("song-list"), {"search": search_string})
 
-        searched_songs = list(
-            filter(lambda song: search_string in song.title or search_string in self.get_artist_name(song), self.songs)
-        )
+                searched_songs = [song for song in self.songs
+                                  if search_string in song.title or search_string in self.get_artist_name(song)]
 
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(len(searched_songs), len(response.data))
-        for song in searched_songs:
-            self.assertIn(SongSerializer(instance=song).data, response.data)
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(len(searched_songs), len(response.data))
+                for song in searched_songs:
+                    self.assertIn(SongSerializer(instance=song).data, response.data)
 
     @staticmethod
     def get_artist_name(song):
@@ -182,6 +183,46 @@ class SongViewSetTest(APITestCase):
         for artist in song.artist.all():
             result.append(artist.name)
         return "".join(result)
+
+    sorting_params = {
+        "Sorting by year(newest to oldest)": ("-year", lambda song: song.year, True),
+        "Sorting by year(oldest to newest)": ("year", lambda song: song.year, False),
+        "Sorting by title(A to Z)": ("title", lambda song: song.title, False),
+        "Sorting by title(Z to A)": ("-title", lambda song: song.title, True)
+    }
+
+    def test_can_sorting_songs(self):
+        for ordering, sorted_key, reverse_flag in self.sorting_params.values():
+            with self.subTest(ordering=ordering, sorted_key=sorted_key, reverse_flag=reverse_flag):
+                response = self.client.get(reverse("song-list"), {"ordering": ordering})
+                sorting_songs = sorted(self.songs, key=sorted_key, reverse=reverse_flag)
+                self.assert_sorting_result(sorting_songs, response)
+
+    def test_can_sorting_user_songs(self):
+        for ordering, sorted_key, reverse_flag in self.sorting_params.values():
+            with self.subTest(ordering=ordering, sorted_key=sorted_key, reverse_flag=reverse_flag):
+                user_id = self.song.user_id
+                response = self.client.get(reverse("nested-song-list", args=[user_id]), {"ordering": ordering})
+                user_songs = [song for song in self.songs if song.user_id == user_id]
+                sorting_songs = sorted(user_songs, key=sorted_key, reverse=reverse_flag)
+                self.assert_sorting_result(sorting_songs, response)
+
+    def assert_sorting_result(self, sorting_songs, response):
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(sorting_songs), len(response.data))
+        for (sorting_song, response_song) in zip(sorting_songs, response.data):
+            self.assertEqual(SongSerializer(instance=sorting_song).data["id"], response_song["id"])
+
+    def test_can_paginate_songs(self):
+        pagination_params = [(1, 3, 3), (2, 3, 2), (1, 8, 5)]
+        for page, page_size, results_len in pagination_params:
+            with self.subTest(page=page, page_size=page_size, results_len=results_len):
+                response = self.client.get(reverse("song-list"), {"page": page, "page_size": page_size})
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(results_len, len(response.data["results"]))
+                for song in self.songs[(page - 1) * page_size:page * page_size]:
+                    self.assertIn(SongSerializer(instance=song).data, response.data["results"])
 
 
 class PlaylistViewSetTest(APITestCase):
@@ -284,15 +325,51 @@ class PlaylistViewSetTest(APITestCase):
     def test_can_search_playlist_by_title(self):
         authorization(self.client, self.user)
 
-        search_title = "playlist"
-        response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"search": search_title})
+        search_params = ["playlist", "title", "test title"]
+        for search_title in search_params:
+            with self.subTest(search_params=search_params):
+                response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"search": search_title})
 
-        search_playlists = list(filter(lambda playlist: playlist.title.startswith(search_title), self.user_playlists))
+                search_playlists = [playlist for playlist in self.user_playlists
+                                    if playlist.title.startswith(search_title)]
 
-        self.assertEqual(status.HTTP_200_OK, response.status_code)
-        self.assertEqual(len(search_playlists), len(response.data))
-        for playlist in search_playlists:
-            self.assertIn(PlaylistSerializer(instance=playlist).data, response.data)
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(len(search_playlists), len(response.data))
+                for playlist in search_playlists:
+                    self.assertIn(PlaylistSerializer(instance=playlist).data, response.data)
+
+    def test_can_sorting_playlists(self):
+        sorting_params = {
+            "Sorting by title(A to Z)": ("title", False),
+            "Sorting by title(Z to A)": ("-title", True)
+        }
+        for ordering, reverse_flag in sorting_params.values():
+            with self.subTest(ordering=ordering, reverse_flag=reverse_flag):
+                authorization(self.client, self.user)
+
+                response = self.client.get(reverse("playlist-list", args=[self.user.id]), {"ordering": ordering})
+                sorting_playlists = sorted(self.user_playlists, key=lambda playlist: playlist.title,
+                                           reverse=reverse_flag)
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(len(sorting_playlists), len(response.data))
+                for (sorting_playlist, response_playlist) in zip(sorting_playlists, response.data):
+                    self.assertEqual(PlaylistSerializer(instance=sorting_playlist).data["id"], response_playlist["id"])
+
+    def test_can_paginate_playlists(self):
+        authorization(self.client, self.user)
+
+        pagination_params = [(1, 3, 3), (1, 2, 2), (2, 2, 1)]
+        for page, page_size, results_len in pagination_params:
+            with self.subTest(page=page, page_size=page_size, results_len=results_len):
+                response = self.client.get(reverse("playlist-list", args=[self.user.id]),
+                                           {"page": page, "page_size": page_size})
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(results_len, len(response.data["results"]))
+                self.assertEqual(len(self.user_playlists), response.data["count"])
+                for playlist in self.user_playlists[(page - 1) * page_size: page * page_size]:
+                    self.assertIn(PlaylistSerializer(instance=playlist).data, response.data["results"])
 
 
 def authorization(client, user):
