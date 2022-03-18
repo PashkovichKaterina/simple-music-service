@@ -221,11 +221,9 @@ class SongViewSetTest(APITestCase):
 
                 self.assertEqual(status.HTTP_200_OK, response.status_code)
                 self.assertEqual(results_len, len(response.data["results"]))
-                print(response.data["results"])
 
                 sorting_songs = sorted(self.songs, key=lambda song: song.year, reverse=False)
                 for song in sorting_songs[(page - 1) * page_size:page * page_size]:
-                    print(SongSerializer(instance=song).data)
                     self.assertIn(SongSerializer(instance=song).data, response.data["results"])
 
 
