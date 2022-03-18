@@ -10,9 +10,10 @@ from .serializers import (
     ArtistSerializer,
     MyTokenObtainPairSerializer,
     UserSerializer,
-    PlaylistSerializer
+    PlaylistSerializer,
+    RatingSerializer
 )
-from .models import Song, Artist, Playlist
+from .models import Song, Artist, Playlist, Rating
 from .permissions import IsOwner
 from .paginations import PageNumberAndPageSizePagination
 
@@ -79,3 +80,11 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         item = get_object_or_404(self.queryset, pk=pk, user=users_pk)
         serializer = self.get_serializer(item)
         return Response(serializer.data)
+
+
+class RatingViewSet(viewsets.ModelViewSet):
+    serializer_class = RatingSerializer
+    http_method_names = ["post", "patch"]
+
+    def get_queryset(self):
+        return Rating.objects.filter(song=self.kwargs["songs_pk"])
