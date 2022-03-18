@@ -48,12 +48,13 @@ class SongSerializer(serializers.ModelSerializer):
         fields = ["id", "title", "year", "artist", "artist_list", "location", "rating", "reviews", "user_mark"]
 
     def get_user_mark(self, obj):
-        user_id = self.context["request"].user.id
-        try:
-            user_mark = Rating.objects.get(song=obj.id, user=user_id)
-            return RatingSerializer().to_representation(user_mark)
-        except Rating.DoesNotExist:
-            return None
+        if "request" in self.context:
+            try:
+                user_id = self.context["request"].user.id
+                user_mark = Rating.objects.get(song=obj.id, user=user_id)
+                return RatingSerializer().to_representation(user_mark)
+            except Rating.DoesNotExist:
+                return None
 
     def create(self, validated_data):
         user_id = self.context["request"].user.id

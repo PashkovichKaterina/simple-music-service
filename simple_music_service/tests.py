@@ -7,8 +7,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from moto import mock_s3
 import boto3
 from .serializers import ArtistSerializer, SongSerializer, PlaylistSerializer
-from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory
-from .models import Artist, Playlist
+from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory
+from .models import Artist, Playlist, Rating
 
 
 class ArtistViewSetTest(APITestCase):
@@ -221,7 +221,11 @@ class SongViewSetTest(APITestCase):
 
                 self.assertEqual(status.HTTP_200_OK, response.status_code)
                 self.assertEqual(results_len, len(response.data["results"]))
-                for song in self.songs[(page - 1) * page_size:page * page_size]:
+                print(response.data["results"])
+
+                sorting_songs = sorted(self.songs, key=lambda song: song.year, reverse=False)
+                for song in sorting_songs[(page - 1) * page_size:page * page_size]:
+                    print(SongSerializer(instance=song).data)
                     self.assertIn(SongSerializer(instance=song).data, response.data["results"])
 
 
@@ -370,6 +374,44 @@ class PlaylistViewSetTest(APITestCase):
                 self.assertEqual(len(self.user_playlists), response.data["count"])
                 for playlist in self.user_playlists[(page - 1) * page_size: page * page_size]:
                     self.assertIn(PlaylistSerializer(instance=playlist).data, response.data["results"])
+
+
+class RatingViewSetTest(APITestCase):
+    @classmethod
+    @mock_s3
+    def setUpTestData(cls):
+        cls.bucket_name = "simple-music-service-storage"
+        s3 = boto3.resource("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=cls.bucket_name)
+        cls.user = UserFactory.create()
+        cls.ratings = RatingFactory.create_batch(size=5, user=cls.user)
+        cls.song = SongFactory.create()
+
+    def test_can_create_rating(self):
+        authorization(self.client, self.user)
+
+        payload = {"mark": 5}
+        response = self.client.post(reverse("song-rating-list", args=[self.song.id]), payload)
+        created_rating = Rating.objects.get(user=self.user, song=self.song)
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        self.assertEqual(payload["mark"], response.data["mark"])
+        self.assertEqual(payload["mark"], created_rating.mark)
+
+    def test_can_update_rating(self):
+        authorization(self.client, self.user)
+
+        rating_data = {"mark": 2}
+        self.client.post(reverse("song-rating-list", args=[self.song.id]), rating_data)
+        rating = Rating.objects.get(user=self.user, song=self.song)
+
+        payload = {"mark": 4}
+        response = self.client.patch(reverse("song-rating-detail", args=[self.song.id, rating.id]), payload)
+        rating.refresh_from_db()
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(payload["mark"], response.data["mark"])
+        self.assertEqual(payload["mark"], rating.mark)
 
 
 def authorization(client, user):
