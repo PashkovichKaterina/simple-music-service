@@ -17,11 +17,11 @@ class Song(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     @property
-    def rating(self):
+    def average_rating(self):
         return self.rating_set.aggregate(models.Avg("mark"))["mark__avg"]
 
     @property
-    def reviews(self):
+    def reviews_count(self):
         return self.rating_set.count()
 
 

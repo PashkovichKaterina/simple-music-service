@@ -3,6 +3,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
 from .models import Song, Artist, Playlist, Rating
 from .exceptions import AlreadyExistingObjectException
+from .mixins import UserMarkMixin
 
 
 class ArtistSerializer(serializers.ModelSerializer):
@@ -17,44 +18,36 @@ class RatingSerializer(serializers.ModelSerializer):
         fields = ["id", "mark"]
 
     def create(self, validated_data):
-        user_id = self.context["request"].user.id
-        validated_data["user_id"] = user_id
-        song_id = self.context["request"].parser_context["kwargs"]["songs_pk"]
-        validated_data["song_id"] = song_id
-        if Rating.objects.filter(song=song_id, user=user_id).exists():
+        self.set_song_and_user_data(validated_data)
+        if Rating.objects.filter(song=validated_data["song_id"], user=validated_data["user_id"]).exists():
             raise AlreadyExistingObjectException()
         else:
             return super().create(validated_data)
 
     def update(self, instance, validated_data):
+        self.set_song_and_user_data(validated_data)
+        instance = Rating.objects.get(song=validated_data["song_id"], user=validated_data["user_id"])
+        return super().update(instance, validated_data)
+
+    def set_song_and_user_data(self, validated_data):
         user_id = self.context["request"].user.id
         validated_data["user_id"] = user_id
         song_id = self.context["request"].parser_context["kwargs"]["songs_pk"]
         validated_data["song_id"] = song_id
-        instance = Rating.objects.get(song=song_id, user=user_id)
-        return super().update(instance, validated_data)
 
 
-class SongSerializer(serializers.ModelSerializer):
+class SongSerializer(serializers.ModelSerializer, UserMarkMixin):
     artist = ArtistSerializer(many=True, read_only=True)
     artist_list = serializers.ListSerializer(
         child=serializers.CharField(max_length=50), write_only=True
     )
-    rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
+    average_rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
     user_mark = serializers.SerializerMethodField()
 
     class Meta:
         model = Song
-        fields = ["id", "title", "year", "artist", "artist_list", "location", "rating", "reviews", "user_mark"]
-
-    def get_user_mark(self, obj):
-        if "request" in self.context:
-            try:
-                user_id = self.context["request"].user.id
-                user_mark = Rating.objects.get(song=obj.id, user=user_id)
-                return RatingSerializer().to_representation(user_mark)
-            except Rating.DoesNotExist:
-                return None
+        fields = ["id", "title", "year", "artist", "artist_list", "location", "average_rating", "reviews_count",
+                  "user_mark"]
 
     def create(self, validated_data):
         user_id = self.context["request"].user.id
@@ -107,28 +100,20 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class PlaylistSongSerializer(serializers.ModelSerializer):
+class PlaylistSongSerializer(serializers.ModelSerializer, UserMarkMixin):
     artist = ArtistSerializer(many=True, read_only=True)
     id = serializers.IntegerField()
-    rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
+    average_rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
     user_mark = serializers.SerializerMethodField()
 
     class Meta:
         model = Song
-        fields = ["id", "title", "year", "artist", "location", "rating", "reviews", "user_mark"]
+        fields = ["id", "title", "year", "artist", "location", "average_rating", "reviews_count", "user_mark"]
         extra_kwargs = {
             "title": {"read_only": True},
             "year": {"read_only": True},
             "location": {"read_only": True},
         }
-
-    def get_user_mark(self, obj):
-        user_id = self.context["request"].user.id
-        try:
-            user_mark = Rating.objects.get(song=obj.id, user=user_id)
-            return RatingSerializer().to_representation(user_mark)
-        except Rating.DoesNotExist:
-            return None
 
 
 class PlaylistSerializer(serializers.ModelSerializer):
