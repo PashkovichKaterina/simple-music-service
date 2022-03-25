@@ -4,27 +4,30 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.shortcuts import get_object_or_404
+from django.db.models import Avg
 from django.contrib.auth.models import User
 from .serializers import (
     SongSerializer,
     ArtistSerializer,
     MyTokenObtainPairSerializer,
     UserSerializer,
-    PlaylistSerializer
+    PlaylistSerializer,
+    RatingSerializer
 )
-from .models import Song, Artist, Playlist
+from .models import Song, Artist, Playlist, Rating
 from .permissions import IsOwner
 from .paginations import PageNumberAndPageSizePagination
+from .filters import NotNoneValuesLargerOrderingFilter
 
 
 class SongViewSet(viewsets.ModelViewSet):
-    queryset = Song.objects.all()
+    queryset = Song.objects.annotate(avg_rating=Avg("rating__mark")).all()
     serializer_class = SongSerializer
     http_method_names = ["get"]
-    filter_backends = [SearchFilter, OrderingFilter]
+    filter_backends = [SearchFilter, NotNoneValuesLargerOrderingFilter]
     pagination_class = PageNumberAndPageSizePagination
     search_fields = ["title", "artist__name"]
-    ordering_fields = ["title", "year"]
+    ordering_fields = ["title", "year", "avg_rating"]
     ordering = ["-year"]
 
 
@@ -32,7 +35,7 @@ class NestedSongViewSet(SongViewSet):
     http_method_names = ["get", "post", "delete"]
 
     def get_queryset(self):
-        return Song.objects.filter(user=self.kwargs["users_pk"])
+        return Song.objects.annotate(avg_rating=Avg("rating__mark")).filter(user=self.kwargs["users_pk"])
 
     def retrieve(self, request, pk=None, users_pk=None):
         item = get_object_or_404(self.queryset, pk=pk, user=users_pk)
@@ -79,3 +82,11 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         item = get_object_or_404(self.queryset, pk=pk, user=users_pk)
         serializer = self.get_serializer(item)
         return Response(serializer.data)
+
+
+class RatingViewSet(viewsets.ModelViewSet):
+    serializer_class = RatingSerializer
+    http_method_names = ["post", "patch"]
+
+    def get_queryset(self):
+        return Rating.objects.filter(song=self.kwargs["songs_pk"])

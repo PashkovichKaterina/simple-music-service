@@ -1,7 +1,9 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
-from .models import Song, Artist, Playlist
+from .models import Song, Artist, Playlist, Rating
+from .exceptions import AlreadyExistingObjectException
+from .mixins import UserMarkMixin
 
 
 class ArtistSerializer(serializers.ModelSerializer):
@@ -10,15 +12,42 @@ class ArtistSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
 
 
-class SongSerializer(serializers.ModelSerializer):
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = ["id", "mark"]
+
+    def create(self, validated_data):
+        self.set_song_and_user_data(validated_data)
+        if Rating.objects.filter(song=validated_data["song_id"], user=validated_data["user_id"]).exists():
+            raise AlreadyExistingObjectException()
+        else:
+            return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        self.set_song_and_user_data(validated_data)
+        instance = Rating.objects.get(song=validated_data["song_id"], user=validated_data["user_id"])
+        return super().update(instance, validated_data)
+
+    def set_song_and_user_data(self, validated_data):
+        user_id = self.context["request"].user.id
+        validated_data["user_id"] = user_id
+        song_id = self.context["request"].parser_context["kwargs"]["songs_pk"]
+        validated_data["song_id"] = song_id
+
+
+class SongSerializer(serializers.ModelSerializer, UserMarkMixin):
     artist = ArtistSerializer(many=True, read_only=True)
     artist_list = serializers.ListSerializer(
         child=serializers.CharField(max_length=50), write_only=True
     )
+    average_rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
+    user_mark = serializers.SerializerMethodField()
 
     class Meta:
         model = Song
-        fields = ["id", "title", "year", "artist", "artist_list", "location"]
+        fields = ["id", "title", "year", "artist", "artist_list", "location", "average_rating", "reviews_count",
+                  "user_mark"]
 
     def create(self, validated_data):
         user_id = self.context["request"].user.id
@@ -71,13 +100,15 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class PlaylistSongSerializer(serializers.ModelSerializer):
+class PlaylistSongSerializer(serializers.ModelSerializer, UserMarkMixin):
     artist = ArtistSerializer(many=True, read_only=True)
     id = serializers.IntegerField()
+    average_rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
+    user_mark = serializers.SerializerMethodField()
 
     class Meta:
         model = Song
-        fields = ["id", "title", "year", "artist", "location"]
+        fields = ["id", "title", "year", "artist", "location", "average_rating", "reviews_count", "user_mark"]
         extra_kwargs = {
             "title": {"read_only": True},
             "year": {"read_only": True},

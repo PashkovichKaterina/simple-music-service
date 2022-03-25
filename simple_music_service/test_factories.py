@@ -1,7 +1,9 @@
+import random
+
 from factory.django import DjangoModelFactory, FileField
-from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall
+from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall, LazyAttribute
 from django.contrib.auth.models import User
-from .models import Artist, Song, Playlist
+from .models import Artist, Song, Playlist, Rating
 
 
 class ArtistFactory(DjangoModelFactory):
@@ -47,3 +49,12 @@ class PlaylistFactory(DjangoModelFactory):
         if not create or not extracted:
             return
         self.song.add(*extracted)
+
+
+class RatingFactory(DjangoModelFactory):
+    class Meta:
+        model = Rating
+
+    song = SubFactory(SongFactory)
+    user = SubFactory(UserFactory)
+    mark = 3
