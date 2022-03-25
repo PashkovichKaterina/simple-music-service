@@ -9,7 +9,9 @@ from .views import (
     UserViewSet,
     NestedSongViewSet,
     PlaylistViewSet,
-    RatingViewSet
+    RatingViewSet,
+    CommentForSongViewSet,
+    CommentForUserViewSet
 )
 
 router = routers.DefaultRouter()
@@ -21,9 +23,11 @@ router.register(r"signup", SignupViewSet, basename="signup")
 users_router = routers.NestedSimpleRouter(router, r"users", lookup="users")
 users_router.register(r"songs", NestedSongViewSet, basename="nested-song")
 users_router.register(r"playlists", PlaylistViewSet, basename="playlist")
+users_router.register(r"comments", CommentForUserViewSet, basename="user-comment")
 
 songs_router = routers.NestedSimpleRouter(router, r"songs", lookup="songs")
 songs_router.register(r"ratings", RatingViewSet, basename="song-rating")
+songs_router.register(r"comments", CommentForSongViewSet, basename="song-comment")
 
 urlpatterns = [
     path("", include(router.urls)),
