@@ -97,6 +97,9 @@ class RatingViewSet(viewsets.ModelViewSet):
 class CommentForSongViewSet(viewsets.ModelViewSet):
     serializer_class = CommentForSongSerializer
     pagination_class = PageNumberAndPageSizePagination
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_date"]
+    ordering = ["created_date"]
 
     def get_queryset(self):
         return Comment.objects.filter(song=self.kwargs["songs_pk"])
@@ -107,6 +110,9 @@ class CommentForUserViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "patch", "delete"]
     permission_classes = (IsOwner,)
     pagination_class = PageNumberAndPageSizePagination
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_date"]
+    ordering = ["created_date"]
 
     def get_queryset(self):
         return Comment.objects.filter(user=self.kwargs["users_pk"])
