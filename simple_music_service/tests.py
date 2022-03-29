@@ -6,9 +6,10 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from moto import mock_s3
 import boto3
-from .serializers import ArtistSerializer, SongSerializer, PlaylistSerializer
-from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory
-from .models import Artist, Playlist, Rating
+from .serializers import (ArtistSerializer, SongSerializer, PlaylistSerializer, CommentForSongSerializer,
+                          CommentForUserSerializer)
+from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory, CommentFactory
+from .models import Artist, Playlist, Rating, Comment
 
 
 class ArtistViewSetTest(APITestCase):
@@ -222,7 +223,7 @@ class SongViewSetTest(APITestCase):
                 self.assertEqual(status.HTTP_200_OK, response.status_code)
                 self.assertEqual(results_len, len(response.data["results"]))
 
-                sorting_songs = sorted(self.songs, key=lambda song: song.year, reverse=False)
+                sorting_songs = sorted(self.songs, key=lambda song: song.year, reverse=True)
                 for song in sorting_songs[(page - 1) * page_size:page * page_size]:
                     self.assertIn(SongSerializer(instance=song).data, response.data["results"])
 
@@ -410,6 +411,132 @@ class RatingViewSetTest(APITestCase):
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assertEqual(payload["mark"], response.data["mark"])
         self.assertEqual(payload["mark"], rating.mark)
+
+
+class CommentViewSetTest(APITestCase):
+    @classmethod
+    @mock_s3
+    def setUpTestData(cls):
+        cls.bucket_name = "simple-music-service-storage"
+        s3 = boto3.resource("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=cls.bucket_name)
+        cls.user = UserFactory.create()
+        cls.song = SongFactory.create()
+
+        cls.user_and_song_comments = CommentFactory.create_batch(size=5, user=cls.user, song=cls.song)
+        cls.all_comments = CommentFactory.create_batch(size=3)
+        cls.all_comments.extend(cls.user_and_song_comments)
+        cls.comment = cls.user_and_song_comments[0]
+
+    def test_can_browse_all_comments_by_song(self):
+        response = self.client.get(reverse("song-comment-list", args=[self.song.id]))
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(self.user_and_song_comments), len(response.data))
+        for comment in self.user_and_song_comments:
+            self.assertIn(CommentForSongSerializer(instance=comment).data, response.data)
+
+    def test_can_browse_all_user_comments(self):
+        authorization(self.client, self.user)
+
+        response = self.client.get(reverse("user-comment-list", args=[self.user.id]))
+
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(len(self.user_and_song_comments), len(response.data))
+        for comment in self.user_and_song_comments:
+            self.assertIn(CommentForUserSerializer(instance=comment).data, response.data)
+
+    def test_can_create_new_comment(self):
+        authorization(self.client, self.user)
+
+        payload = {"message": "new test comment"}
+        response = self.client.post(reverse("song-comment-list", args=[self.song.id]), payload)
+        created_comment = Comment.objects.get(user=self.user, song=self.song, message=payload["message"])
+
+        self.assertEqual(status.HTTP_201_CREATED, response.status_code)
+        for key, value in payload.items():
+            self.assertEqual(value, response.data[key])
+            self.assertEqual(value, getattr(created_comment, key))
+
+    def test_can_delete_comment_by_song(self):
+        authorization(self.client, self.user)
+
+        response = self.client.delete(reverse("song-comment-detail", args=[self.song.id, self.comment.id]))
+
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertFalse(Comment.objects.filter(pk=self.comment.id))
+
+    def test_can_delete_user_comment(self):
+        authorization(self.client, self.user)
+
+        response = self.client.delete(reverse("user-comment-detail", args=[self.user.id, self.comment.id]))
+
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertFalse(Comment.objects.filter(pk=self.comment.id))
+
+    def test_can_edit_comment_by_song(self):
+        authorization(self.client, self.user)
+
+        comment_data = {"message": "test comment"}
+        self.client.post(reverse("song-comment-list", args=[self.song.id]), comment_data, format="json")
+        created_comment = Comment.objects.get(user=self.user, song=self.song, message=comment_data["message"])
+
+        payload = {"message": "edit test comment"}
+        response = self.client.patch(
+            reverse("song-comment-detail", args=[self.song.id, created_comment.id]), payload, format="json"
+        )
+        created_comment.refresh_from_db()
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        for key, value in payload.items():
+            self.assertEquals(value, response.data[key])
+            self.assertEquals(value, getattr(created_comment, key))
+
+    def test_can_edit_user_comment(self):
+        authorization(self.client, self.user)
+
+        comment_data = {"message": "test comment"}
+        self.client.post(reverse("song-comment-list", args=[self.song.id]), comment_data, format="json")
+        created_comment = Comment.objects.get(user=self.user, song=self.song, message=comment_data["message"])
+
+        payload = {"message": "edit test comment"}
+        response = self.client.patch(
+            reverse("user-comment-detail", args=[self.user.id, created_comment.id]), payload, format="json"
+        )
+        created_comment.refresh_from_db()
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        for key, value in payload.items():
+            self.assertEquals(value, response.data[key])
+            self.assertEquals(value, getattr(created_comment, key))
+
+    def test_can_paginate_comments_by_song(self):
+        authorization(self.client, self.user)
+
+        pagination_params = [(1, 3, 3), (1, 2, 2), (2, 3, 2)]
+        for page, page_size, results_len in pagination_params:
+            with self.subTest(page=page, page_size=page_size, results_len=results_len):
+                response = self.client.get(reverse("song-comment-list", args=[self.song.id]),
+                                           {"page": page, "page_size": page_size})
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(results_len, len(response.data["results"]))
+                self.assertEqual(len(self.user_and_song_comments), response.data["count"])
+                for comment in self.user_and_song_comments[(page - 1) * page_size: page * page_size]:
+                    self.assertIn(CommentForSongSerializer(instance=comment).data, response.data["results"])
+
+    def test_can_paginate_user_comments(self):
+        authorization(self.client, self.user)
+
+        pagination_params = [(1, 3, 3), (1, 2, 2), (2, 3, 2)]
+        for page, page_size, results_len in pagination_params:
+            with self.subTest(page=page, page_size=page_size, results_len=results_len):
+                response = self.client.get(reverse("user-comment-list", args=[self.user.id]),
+                                           {"page": page, "page_size": page_size})
+
+                self.assertEqual(status.HTTP_200_OK, response.status_code)
+                self.assertEqual(results_len, len(response.data["results"]))
+                self.assertEqual(len(self.user_and_song_comments), response.data["count"])
+                for comment in self.user_and_song_comments[(page - 1) * page_size: page * page_size]:
+                    self.assertIn(CommentForUserSerializer(instance=comment).data, response.data["results"])
 
 
 def authorization(client, user):

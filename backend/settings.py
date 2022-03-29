@@ -184,3 +184,5 @@ LOGGING = {
         }
     }
 }
+
+DATETIME_FORMAT = "%b %d %Y %H:%M"

@@ -1,7 +1,8 @@
+from backend import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
-from .models import Song, Artist, Playlist, Rating
+from .models import Song, Artist, Playlist, Rating, Comment
 from .exceptions import AlreadyExistingObjectException
 from .mixins import UserMarkMixin
 
@@ -18,22 +19,16 @@ class RatingSerializer(serializers.ModelSerializer):
         fields = ["id", "mark"]
 
     def create(self, validated_data):
-        self.set_song_and_user_data(validated_data)
+        set_song_and_user_data(self, validated_data)
         if Rating.objects.filter(song=validated_data["song_id"], user=validated_data["user_id"]).exists():
             raise AlreadyExistingObjectException()
         else:
             return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        self.set_song_and_user_data(validated_data)
+        set_song_and_user_data(self, validated_data)
         instance = Rating.objects.get(song=validated_data["song_id"], user=validated_data["user_id"])
         return super().update(instance, validated_data)
-
-    def set_song_and_user_data(self, validated_data):
-        user_id = self.context["request"].user.id
-        validated_data["user_id"] = user_id
-        song_id = self.context["request"].parser_context["kwargs"]["songs_pk"]
-        validated_data["song_id"] = song_id
 
 
 class SongSerializer(serializers.ModelSerializer, UserMarkMixin):
@@ -43,11 +38,16 @@ class SongSerializer(serializers.ModelSerializer, UserMarkMixin):
     )
     average_rating = serializers.DecimalField(max_digits=2, decimal_places=1, read_only=True)
     user_mark = serializers.SerializerMethodField()
+    comments_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Song
         fields = ["id", "title", "year", "artist", "artist_list", "location", "average_rating", "reviews_count",
-                  "user_mark"]
+                  "user_mark", "comments_count"]
+
+    @staticmethod
+    def get_comments_count(obj):
+        return Song.objects.get(id=obj.id).comment_set.count()
 
     def create(self, validated_data):
         user_id = self.context["request"].user.id
@@ -144,3 +144,32 @@ class PlaylistSerializer(serializers.ModelSerializer):
             song = Song.objects.get(**song)
             instance.song.add(song)
         instance.save()
+
+
+class CommentForSongSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    created_date_time = serializers.DateTimeField(format=settings.DATETIME_FORMAT, read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ["id", "user", "message", "created_date_time"]
+
+    def create(self, validated_data):
+        set_song_and_user_data(self, validated_data)
+        return super().create(validated_data)
+
+
+class CommentForUserSerializer(serializers.ModelSerializer):
+    song = SongSerializer(read_only=True)
+    created_date_time = serializers.DateTimeField(format=settings.DATETIME_FORMAT, read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ["id", "song", "message", "created_date_time"]
+
+
+def set_song_and_user_data(instance, validated_data):
+    user_id = instance.context["request"].user.id
+    validated_data["user_id"] = user_id
+    song_id = instance.context["request"].parser_context["kwargs"]["songs_pk"]
+    validated_data["song_id"] = song_id

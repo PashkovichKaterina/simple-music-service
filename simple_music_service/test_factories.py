@@ -1,9 +1,7 @@
-import random
-
 from factory.django import DjangoModelFactory, FileField
-from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall, LazyAttribute
+from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall
 from django.contrib.auth.models import User
-from .models import Artist, Song, Playlist, Rating
+from .models import Artist, Song, Playlist, Rating, Comment
 
 
 class ArtistFactory(DjangoModelFactory):
@@ -26,7 +24,7 @@ class SongFactory(DjangoModelFactory):
         model = Song
 
     title = Sequence(lambda n: f"song title {n}")
-    year = "2020-12-12"
+    year = Sequence(lambda n: f"2020-12-{n + 1:02d}")
     location = FileField(filename="song.mp3")
     user = SubFactory(UserFactory)
 
@@ -58,3 +56,13 @@ class RatingFactory(DjangoModelFactory):
     song = SubFactory(SongFactory)
     user = SubFactory(UserFactory)
     mark = 3
+
+
+class CommentFactory(DjangoModelFactory):
+    class Meta:
+        model = Comment
+
+    song = SubFactory(SongFactory)
+    user = SubFactory(UserFactory)
+    message = Sequence(lambda n: f"test message {n}")
+    created_date = "2020-12-12"

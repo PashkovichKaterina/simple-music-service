@@ -40,3 +40,10 @@ class Rating(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["song", "user"], name="unique_song_user_rate")]
+
+
+class Comment(models.Model):
+    song = models.ForeignKey(Song, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    message = models.CharField(max_length=100)
+    created_date_time = models.DateTimeField(auto_now_add=True)

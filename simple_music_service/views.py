@@ -12,9 +12,11 @@ from .serializers import (
     MyTokenObtainPairSerializer,
     UserSerializer,
     PlaylistSerializer,
-    RatingSerializer
+    RatingSerializer,
+    CommentForSongSerializer,
+    CommentForUserSerializer
 )
-from .models import Song, Artist, Playlist, Rating
+from .models import Song, Artist, Playlist, Rating, Comment
 from .permissions import IsOwner
 from .paginations import PageNumberAndPageSizePagination
 from .filters import NotNoneValuesLargerOrderingFilter
@@ -90,3 +92,27 @@ class RatingViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Rating.objects.filter(song=self.kwargs["songs_pk"])
+
+
+class CommentForSongViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentForSongSerializer
+    pagination_class = PageNumberAndPageSizePagination
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_date_time"]
+    ordering = ["created_date_time"]
+
+    def get_queryset(self):
+        return Comment.objects.filter(song=self.kwargs["songs_pk"])
+
+
+class CommentForUserViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentForUserSerializer
+    http_method_names = ["get", "patch", "delete"]
+    permission_classes = (IsOwner,)
+    pagination_class = PageNumberAndPageSizePagination
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_date_time"]
+    ordering = ["created_date_time"]
+
+    def get_queryset(self):
+        return Comment.objects.filter(user=self.kwargs["users_pk"])
