@@ -148,11 +148,11 @@ class PlaylistSerializer(serializers.ModelSerializer):
 
 class CommentForSongSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    created_date = serializers.DateTimeField(format=settings.DATETIME_FORMAT, read_only=True)
+    created_date_time = serializers.DateTimeField(format=settings.DATETIME_FORMAT, read_only=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "user", "message", "created_date"]
+        fields = ["id", "user", "message", "created_date_time"]
 
     def create(self, validated_data):
         set_song_and_user_data(self, validated_data)
@@ -161,11 +161,11 @@ class CommentForSongSerializer(serializers.ModelSerializer):
 
 class CommentForUserSerializer(serializers.ModelSerializer):
     song = SongSerializer(read_only=True)
-    created_date = serializers.DateTimeField(format=settings.DATETIME_FORMAT, read_only=True)
+    created_date_time = serializers.DateTimeField(format=settings.DATETIME_FORMAT, read_only=True)
 
     class Meta:
         model = Comment
-        fields = ["id", "song", "message", "created_date"]
+        fields = ["id", "song", "message", "created_date_time"]
 
 
 def set_song_and_user_data(instance, validated_data):

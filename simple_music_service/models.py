@@ -44,6 +44,6 @@ class Rating(models.Model):
 
 class Comment(models.Model):
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     message = models.CharField(max_length=100)
-    created_date = models.DateTimeField(auto_now_add=True)
+    created_date_time = models.DateTimeField(auto_now_add=True)
