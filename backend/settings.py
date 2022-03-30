@@ -15,10 +15,7 @@ SECRET_KEY = "django-insecure-!1*r80z^756lqc&4lx^wii@7v9kp6!s0q(du51+a9qu53y&k@@
 # SECURITY WARNING: don"t run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS: List[str] = [
-    "backend-service.us-west-2.elasticbeanstalk.com",
-    "127.0.0.1",
-]
+ALLOWED_HOSTS: List[str] = os.environ["ALLOWED_HOSTS"].split(";")
 
 # Application definition
 
@@ -139,9 +136,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Simple music service where users can listen to music and create playlists",
 }
 
-CORS_ALLOWED_ORIGINS = [
-    os.environ["ALLOWED_ORIGINS"]
-]
+CORS_ALLOWED_ORIGINS = os.environ["ALLOWED_ORIGINS"].split(";")
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=float(os.environ["ACCESS_TOKEN_LIFETIME_IN_MINUTES"])),
