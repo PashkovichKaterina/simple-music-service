@@ -35,6 +35,7 @@ class SongViewSet(viewsets.ModelViewSet):
 
 class NestedSongViewSet(SongViewSet):
     http_method_names = ["get", "post", "delete"]
+    permission_classes = (IsOwner,)
 
     def get_queryset(self):
         return Song.objects.annotate(avg_rating=Avg("rating__mark")).filter(user=self.kwargs["users_pk"])
