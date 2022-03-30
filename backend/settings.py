@@ -185,4 +185,4 @@ LOGGING = {
     }
 }
 
-DATETIME_FORMAT = "%b %d %Y %H:%M"
+DATETIME_FORMAT = "iso-8601"
