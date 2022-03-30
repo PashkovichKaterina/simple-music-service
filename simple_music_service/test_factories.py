@@ -65,4 +65,4 @@ class CommentFactory(DjangoModelFactory):
     song = SubFactory(SongFactory)
     user = SubFactory(UserFactory)
     message = Sequence(lambda n: f"test message {n}")
-    created_date = "2020-12-12"
+    created_date_time = "2020-12-12"

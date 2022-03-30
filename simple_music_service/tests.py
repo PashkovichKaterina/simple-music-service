@@ -9,7 +9,7 @@ import boto3
 from .serializers import (ArtistSerializer, SongSerializer, PlaylistSerializer, CommentForSongSerializer,
                           CommentForUserSerializer)
 from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory, CommentFactory
-from .models import Artist, Playlist, Rating, Comment
+from .models import Artist, Playlist, Rating, Comment, Song
 
 
 class ArtistViewSetTest(APITestCase):
@@ -153,7 +153,23 @@ class SongViewSetTest(APITestCase):
         body = s3.Object(self.bucket_name, file_name).get()["Body"].read().decode("utf-8")
         self.assertEqual(body, file_body)
 
+    @mock_s3
+    def test_can_delete_song(self):
+        s3 = boto3.resource("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=self.bucket_name)
+
+        authorization(self.client, self.song.user)
+        response = self.client.delete(reverse("nested-song-detail", args=[self.song.user_id, self.song.id]))
+
+        self.assertEqual(status.HTTP_204_NO_CONTENT, response.status_code)
+        self.assertFalse(Song.objects.filter(id=self.song.id))
+
+        s3_object = s3.Object(self.bucket_name, self.song.location.name)
+        self.assertRaises(s3.meta.client.exceptions.NoSuchKey, s3_object.get)
+
     def test_can_browse_all_user_songs(self):
+        authorization(self.client, self.song.user)
+
         user_id = self.song.user_id
         user_songs = list(filter(lambda song: song.user_id == user_id, self.songs))
 
@@ -200,6 +216,8 @@ class SongViewSetTest(APITestCase):
                 self.assert_sorting_result(sorting_songs, response)
 
     def test_can_sorting_user_songs(self):
+        authorization(self.client, self.song.user)
+
         for ordering, sorted_key, reverse_flag in self.sorting_params.values():
             with self.subTest(ordering=ordering, sorted_key=sorted_key, reverse_flag=reverse_flag):
                 user_id = self.song.user_id
