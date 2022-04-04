@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "drf_spectacular",
+    "anymail",
     "simple_music_service",
 ]
 
@@ -181,3 +182,12 @@ LOGGING = {
 }
 
 DATETIME_FORMAT = "iso-8601"
+
+EMAIL_BACKEND = "anymail.backends.sendinblue.EmailBackend"
+ANYMAIL = {
+    "SENDINBLUE_API_KEY": os.environ["SENDINBLUE_API_KEY"]
+}
+
+BROKER_URL = "redis://redis:6379"
+CELERY_RESULT_BACKEND = "redis://redis:6379"
+BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
