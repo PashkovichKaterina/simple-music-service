@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List
 from datetime import timedelta
+from .secrets import get_secret_value
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-!1*r80z^756lqc&4lx^wii@7v9kp6!s0q(du51+a9qu53y&k@@"
+SECRET_KEY = get_secret_value("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don"t run with debug turned on in production!
 DEBUG = True
@@ -185,7 +186,7 @@ DATETIME_FORMAT = "iso-8601"
 
 EMAIL_BACKEND = "anymail.backends.sendinblue.EmailBackend"
 ANYMAIL = {
-    "SENDINBLUE_API_KEY": os.environ["SENDINBLUE_API_KEY"]
+    "SENDINBLUE_API_KEY": get_secret_value("SENDINBLUE_API_KEY")
 }
 
 BROKER_URL = "redis://redis:6379"
