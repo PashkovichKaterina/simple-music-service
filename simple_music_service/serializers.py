@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from .models import Song, Artist, Playlist, Rating, Comment
 from .exceptions import AlreadyExistingObjectException
 from .mixins import UserMarkMixin
+from .tasks import send_welcome_email
 
 
 class ArtistSerializer(serializers.ModelSerializer):
@@ -86,7 +87,9 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, *args, **kwargs):
-        return self.__save_user(super().create, *args, **kwargs)
+        user = self.__save_user(super().create, *args, **kwargs)
+        send_welcome_email.delay(user.email)
+        return user
 
     def update(self, *args, **kwargs):
         return self.__save_user(super().update, *args, **kwargs)

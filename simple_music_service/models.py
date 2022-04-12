@@ -24,6 +24,10 @@ class Song(models.Model):
     def reviews_count(self):
         return self.rating_set.count()
 
+    def delete(self, using=None, keep_parents=False):
+        super().delete()
+        self.location.delete(save=False)
+
 
 class Playlist(models.Model):
     title = models.CharField(max_length=50)

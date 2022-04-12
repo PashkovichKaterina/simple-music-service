@@ -1,0 +1,31 @@
+name: Deploy to AWS
+
+on:
+  pull_request:
+    types: [ closed ]
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Generate deployment package
+        run: zip -r deploy.zip . -x '*.git*'
+
+      - name: Get current date_time
+        id: date_time
+        run: echo "::set-output name=date_time::$(date +'%Y%m%d-%H%M')"
+
+      - name: Deploy to AWS
+        uses: einaregilsson/beanstalk-deploy@v20
+        with:
+            aws_access_key: ${{secrets.AWS_ACCESS_KEY_ID}}
+            aws_secret_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+            application_name: backend
+            environment_name: backend-dev
+            version_label: backend-dev-${{steps.date_time.outputs.date_time}}
+            region: us-west-2
+            deployment_package: deploy.zip

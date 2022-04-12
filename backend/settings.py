@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List
 from datetime import timedelta
+from .secrets import get_secret_value
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,15 +11,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-!1*r80z^756lqc&4lx^wii@7v9kp6!s0q(du51+a9qu53y&k@@"
+SECRET_KEY = get_secret_value("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don"t run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS: List[str] = [
-    "backend-service.us-west-2.elasticbeanstalk.com",
-    "127.0.0.1",
-]
+ALLOWED_HOSTS: List[str] = os.environ["ALLOWED_HOSTS"].split(";")
 
 # Application definition
 
@@ -33,6 +31,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "drf_spectacular",
+    "anymail",
     "simple_music_service",
 ]
 
@@ -139,9 +138,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Simple music service where users can listen to music and create playlists",
 }
 
-CORS_ALLOWED_ORIGINS = [
-    os.environ["ALLOWED_ORIGINS"]
-]
+CORS_ALLOWED_ORIGINS = os.environ["ALLOWED_ORIGINS"].split(";")
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=float(os.environ["ACCESS_TOKEN_LIFETIME_IN_MINUTES"])),
@@ -185,4 +182,13 @@ LOGGING = {
     }
 }
 
-DATETIME_FORMAT = "%b %d %Y %H:%M"
+DATETIME_FORMAT = "iso-8601"
+
+EMAIL_BACKEND = "anymail.backends.sendinblue.EmailBackend"
+ANYMAIL = {
+    "SENDINBLUE_API_KEY": get_secret_value("SENDINBLUE_API_KEY")
+}
+
+BROKER_URL = "redis://redis:6379"
+CELERY_RESULT_BACKEND = "redis://redis:6379"
+BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
