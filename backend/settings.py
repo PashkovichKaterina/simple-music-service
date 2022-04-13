@@ -1,5 +1,6 @@
 """Django settings for backend project."""
 import os
+import boto3
 from pathlib import Path
 from typing import List
 from datetime import timedelta
@@ -160,28 +161,6 @@ DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ["FILE_UPLOAD_MAX_MEMORY_SIZE"])
 
-LOGGING = {
-    "version": 1,
-    "filters": {
-        "require_debug_true": {
-            "()": "django.utils.log.RequireDebugTrue",
-        }
-    },
-    "handlers": {
-        "console": {
-            "level": "DEBUG",
-            "filters": ["require_debug_true"],
-            "class": "logging.StreamHandler",
-        }
-    },
-    "loggers": {
-        "django.db.backends": {
-            "level": "DEBUG",
-            "handlers": ["console"],
-        }
-    }
-}
-
 DATETIME_FORMAT = "iso-8601"
 
 EMAIL_BACKEND = "anymail.backends.sendinblue.EmailBackend"
@@ -192,3 +171,28 @@ ANYMAIL = {
 BROKER_URL = "redis://redis:6379"
 CELERY_RESULT_BACKEND = "redis://redis:6379"
 BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
+
+boto3_logs_client = boto3.client("logs", region_name=os.environ["CLOUD_WATCH_REGION_NAME"])
+
+LOGGING = {
+    "version": 1,
+    "handlers": {
+        "watchtower": {
+            "class": "watchtower.CloudWatchLogHandler",
+            "boto3_client": boto3_logs_client,
+            "log_group_name": "Simple_music_service_backend",
+            "level": os.environ.get("LOGGING_LEVEL", "INFO").upper()
+        },
+    },
+    "loggers": {
+        "application": {
+            "level": "INFO",
+            "handlers": ["watchtower"],
+            "propagate": False
+        },
+        "django.db.backends": {
+            "level": "DEBUG",
+            "handlers": ["watchtower"],
+        }
+    }
+}

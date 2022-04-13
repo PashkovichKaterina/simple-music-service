@@ -799,6 +799,20 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "watchtower"
+version = "3.0.0"
+description = "Python CloudWatch Logging"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+boto3 = ">=1.9.253,<2"
+
+[package.extras]
+tests = ["pyyaml (>=5.3.1,<6)", "flake8 (>=4.0.1,<5)", "coverage", "build", "wheel", "mypy"]
+
+[[package]]
 name = "wcwidth"
 version = "0.2.5"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -848,7 +862,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "be4340a73815f8bb3699a4615dbd8a124a3c1c334d8253f3f10cbc41e26bfb1b"
+content-hash = "6ea1658043e8de460742a2877b944cbbc3c9d0fd2afe6e2d3db23ec061a1cd2f"
 
 [metadata.files]
 amqp = [
@@ -1308,6 +1322,10 @@ urllib3 = [
 vine = [
     {file = "vine-5.0.0-py2.py3-none-any.whl", hash = "sha256:4c9dceab6f76ed92105027c49c823800dd33cacce13bdedc5b914e3514b7fb30"},
     {file = "vine-5.0.0.tar.gz", hash = "sha256:7d3b1624a953da82ef63462013bbd271d3eb75751489f9807598e8f340bd637e"},
+]
+watchtower = [
+    {file = "watchtower-3.0.0-py3-none-any.whl", hash = "sha256:7f51411a4e736baad0504ce9a68fae5babecf009c15ec4df96451c6fecacbf4c"},
+    {file = "watchtower-3.0.0.tar.gz", hash = "sha256:c66283efb4af22f1dd7565b12450dad4ef9175878f3d65b56ccff0dcf0a53c28"},
 ]
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
