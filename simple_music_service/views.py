@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
@@ -20,6 +20,7 @@ from .models import Song, Artist, Playlist, Rating, Comment
 from .permissions import IsOwner
 from .paginations import PageNumberAndPageSizePagination
 from .filters import NotNoneValuesLargerOrderingFilter
+from .feature_flags import get_feature_flag_value
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -44,6 +45,14 @@ class NestedSongViewSet(SongViewSet):
         item = get_object_or_404(self.queryset, pk=pk, user=users_pk)
         serializer = self.get_serializer(item)
         return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        is_delete_song_available = get_feature_flag_value("isDeleteSongAvailable")
+        if is_delete_song_available:
+            super().destroy(request, *args, **kwargs)
+        else:
+            response = {"detail": "Method \"DELETE\" not allowed."}
+            return Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class ArtistViewSet(viewsets.ModelViewSet):
