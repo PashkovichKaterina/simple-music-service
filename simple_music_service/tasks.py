@@ -25,9 +25,12 @@ def recognize_speech_from_file(location):
     recognizer = Recognizer()
     recognized_string = []
 
-    for chunk in split_file_to_chunks(sound):
+    chunks = split_file_to_chunks(sound)
+    chunk_silent = AudioSegment.silent(duration=10)
+    for chunk in chunks:
+        audio_chunk = chunk_silent + chunk + chunk_silent
         with BytesIO() as memory_buffer:
-            chunk.export(memory_buffer, format="wav")
+            audio_chunk.export(memory_buffer, format="wav")
             with AudioFile(memory_buffer) as source:
                 recognizer.adjust_for_ambient_noise(source)
                 audio = recognizer.record(source)
@@ -37,12 +40,12 @@ def recognize_speech_from_file(location):
         except (UnknownValueError, RequestError):
             pass
 
-        if len(recognized_string) > 0:
-            return " ".join(recognized_string)
-        else:
-            return None
+    if len(recognized_string) > 0:
+        return " ".join(recognized_string)
+    else:
+        return None
 
 
-def split_file_to_chunks(sound, *, chunk_size=60000):
+def split_file_to_chunks(sound, *, chunk_size=6000):
     for i in range(0, len(sound), chunk_size):
         yield sound[i:i + chunk_size]
