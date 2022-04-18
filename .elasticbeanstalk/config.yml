@@ -2,8 +2,6 @@ branch-defaults:
   default:
     environment: backend-dev
     group_suffix: null
-  delete-song_welcome-email:
-    environment: backend-dev
 global:
   application_name: backend
   branch: null
