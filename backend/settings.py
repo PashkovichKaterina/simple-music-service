@@ -185,7 +185,7 @@ LOGGING = {
         },
     },
     "loggers": {
-        "application": {
+        "django": {
             "level": "INFO",
             "handlers": ["watchtower"],
             "propagate": False
