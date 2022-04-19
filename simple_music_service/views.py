@@ -4,7 +4,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.decorators import action
-from celery.result import AsyncResult
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
@@ -25,7 +24,6 @@ from .paginations import PageNumberAndPageSizePagination
 from .filters import NotNoneValuesLargerOrderingFilter
 from .feature_flags import get_feature_flag_value
 from .tasks import recognize_speech_from_file
-from .exceptions import UnableSpeechRecognitionException
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -42,29 +40,16 @@ class SongViewSet(viewsets.ModelViewSet):
     def recognize_speech(self, request, pk=None):
         try:
             song = Song.objects.get(pk=pk)
-            recognize_task = recognize_speech_from_file.delay(song.location.url)
-            result_url = f"{reverse('song-recognize_speech_result')}?task_id={recognize_task.task_id}"
-            response = {"result_url": result_url}
-            return Response(response, status=status.HTTP_202_ACCEPTED)
+            if song.lyrics is None:
+                recognize_speech_from_file.delay(song.id)
+                response_status = status.HTTP_202_ACCEPTED
+            else:
+                response_status = status.HTTP_200_OK
+            response_body = {"result_url": reverse("song-detail", args=[song.id])}
+            return Response(response_body, status=response_status)
         except Song.DoesNotExist:
             response = {"detail": "Not found."}
             return Response(response, status=status.HTTP_404_NOT_FOUND)
-
-    @action(methods=["get"], detail=False, url_path="recognize_speech_result", url_name="recognize_speech_result")
-    def recognize_speech_result(self, request):
-        if "task_id" not in request.query_params:
-            response = {"detail": "The parameter task_id is required"}
-            return Response(response, status=status.HTTP_400_BAD_REQUEST)
-
-        task_result = AsyncResult(request.query_params["task_id"])
-        if task_result.ready():
-            if task_result.result is None:
-                raise UnableSpeechRecognitionException()
-            else:
-                response = {"text": task_result.result}
-                return Response(response, status=status.HTTP_200_OK)
-        else:
-            return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class NestedSongViewSet(SongViewSet):

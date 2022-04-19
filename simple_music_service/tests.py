@@ -247,23 +247,6 @@ class SongViewSetTest(APITestCase):
                 for song in sorting_songs[(page - 1) * page_size:page * page_size]:
                     self.assertIn(SongSerializer(instance=song).data, response.data["results"])
 
-    def test_recognize_speech_result(self):
-        params = {
-            "Result not ready": (False, None, status.HTTP_202_ACCEPTED, None, None),
-            "Correct result": (True, "string", status.HTTP_200_OK, "string", "text"),
-            "Result is None": (True, None, status.HTTP_400_BAD_REQUEST, "Unable to recognize this speech", "detail")
-        }
-        for mock_ready, mock_result, response_status, response_body, response_key in params.values():
-            with self.subTest():
-                celery.result.AsyncResult.ready = Mock(return_value=mock_ready)
-                celery.result.AsyncResult.result = PropertyMock(return_value=mock_result)
-                response = self.client.get(reverse("song-recognize_speech_result"), {"task_id": "123"})
-                self.assertEqual(response_status, response.status_code)
-                if response_key is None:
-                    self.assertIsNone(response.data)
-                else:
-                    self.assertEqual(response_body, response.data[response_key])
-
 
 class PlaylistViewSetTest(APITestCase):
     @classmethod

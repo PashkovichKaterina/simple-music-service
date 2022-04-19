@@ -44,7 +44,7 @@ class SongSerializer(serializers.ModelSerializer, UserMarkMixin):
     class Meta:
         model = Song
         fields = ["id", "title", "year", "artist", "artist_list", "location", "average_rating", "reviews_count",
-                  "user_mark", "comments_count"]
+                  "user_mark", "comments_count", "lyrics"]
 
     @staticmethod
     def get_comments_count(obj):
