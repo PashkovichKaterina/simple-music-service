@@ -15,6 +15,7 @@ class Song(models.Model):
         validators=[FileExtensionValidator(allowed_extensions=["mp3"])]
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    lyrics = models.TextField(null=True)
 
     @property
     def average_rating(self):

@@ -10,6 +10,8 @@ from .serializers import (ArtistSerializer, SongSerializer, PlaylistSerializer, 
                           CommentForUserSerializer)
 from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory, CommentFactory
 from .models import Artist, Playlist, Rating, Comment, Song
+import celery.result
+from unittest.mock import PropertyMock, Mock
 
 
 class ArtistViewSetTest(APITestCase):

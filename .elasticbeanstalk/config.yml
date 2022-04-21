@@ -1,12 +1,12 @@
 branch-defaults:
   default:
-    environment: backend-dev
-    group_suffix: null
-  delete-song_welcome-email:
-    environment: backend-dev
+    environment: backend-dev2
+environment-defaults:
+  backend-dev:
+    branch: null
+    repository: null
 global:
   application_name: backend
-  branch: null
   default_ec2_keyname: aws-eb
   default_platform: Docker running on 64bit Amazon Linux 2
   default_region: us-west-2
@@ -15,6 +15,5 @@ global:
   platform_name: null
   platform_version: null
   profile: null
-  repository: null
   sc: null
   workspace_type: Application

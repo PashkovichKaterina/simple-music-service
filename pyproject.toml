@@ -23,6 +23,8 @@ redis = "^4.2.1"
 gunicorn = "^20.1.0"
 watchtower = "^3.0.0"
 launchdarkly-server-sdk = "^7.4.0"
+SpeechRecognition = "^3.8.1"
+pydub = "^0.25.1"
 
 [tool.poetry.dev-dependencies]
 
