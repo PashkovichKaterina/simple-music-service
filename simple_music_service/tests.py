@@ -1,7 +1,6 @@
 from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-from django.contrib.auth.models import User
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from moto import mock_s3
@@ -9,9 +8,7 @@ import boto3
 from .serializers import (ArtistSerializer, SongSerializer, PlaylistSerializer, CommentForSongSerializer,
                           CommentForUserSerializer)
 from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory, CommentFactory
-from .models import Artist, Playlist, Rating, Comment, Song
-import celery.result
-from unittest.mock import PropertyMock, Mock
+from .models import Artist, Playlist, Rating, Comment, Song, ApplicationUser
 
 
 class ArtistViewSetTest(APITestCase):
@@ -61,7 +58,7 @@ class SignUpViewSetTest(APITestCase):
         payload = {"username": "testUsername", "password": "test password"}
 
         response = self.client.post(reverse("signup-list"), payload)
-        created_user = User.objects.get(username=payload["username"])
+        created_user = ApplicationUser.objects.get(username=payload["username"])
 
         self.assertEqual(status.HTTP_201_CREATED, response.status_code)
         self.assertEqual(payload["username"], response.data["username"])
@@ -76,14 +73,14 @@ class TokenViewSetTest(APITestCase):
 
     def test_can_user_sign_in(self):
         response = self.client.post(reverse("token"), self.payload)
-        signin_user = User.objects.get(username=self.payload["username"])
+        signin_user = ApplicationUser.objects.get(username=self.payload["username"])
 
         self.assertEqual(status.HTTP_200_OK, response.status_code)
         self.assert_tokens_claims(response, signin_user)
 
     def test_can_user_refresh_token(self):
         response = self.client.post(reverse("token"), self.payload)
-        signin_user = User.objects.get(username=self.payload["username"])
+        signin_user = ApplicationUser.objects.get(username=self.payload["username"])
 
         payload = {"refresh": response.data["refresh"]}
         response = self.client.post(reverse("token/refresh"), payload)

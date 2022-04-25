@@ -4,7 +4,7 @@ from django.core.validators import FileExtensionValidator, MinValueValidator, Ma
 from django_lifecycle import hook, LifecycleModelMixin, AFTER_CREATE, AFTER_UPDATE, AFTER_DELETE
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("django")
 
 
 class DatabaseAuditMixin(LifecycleModelMixin):
@@ -35,6 +35,11 @@ class DatabaseAuditMixin(LifecycleModelMixin):
         logger.info(f"after_delete_hook for {self}")
 
 
+class ApplicationUser(DatabaseAuditMixin, User):
+    class Meta:
+        proxy = True
+
+
 class Artist(DatabaseAuditMixin, models.Model):
     name = models.CharField(max_length=50, unique=True)
 
@@ -46,7 +51,7 @@ class Song(DatabaseAuditMixin, models.Model):
     location = models.FileField(
         validators=[FileExtensionValidator(allowed_extensions=["mp3"])]
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(ApplicationUser, on_delete=models.CASCADE)
     lyrics = models.TextField(null=True)
 
     @property
@@ -64,13 +69,13 @@ class Song(DatabaseAuditMixin, models.Model):
 
 class Playlist(DatabaseAuditMixin, models.Model):
     title = models.CharField(max_length=50)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(ApplicationUser, on_delete=models.CASCADE)
     song = models.ManyToManyField(Song)
 
 
 class Rating(DatabaseAuditMixin, models.Model):
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(ApplicationUser, on_delete=models.CASCADE)
     mark = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
@@ -81,7 +86,7 @@ class Rating(DatabaseAuditMixin, models.Model):
 
 class Comment(DatabaseAuditMixin, models.Model):
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(ApplicationUser, null=True, on_delete=models.SET_NULL)
     message = models.CharField(max_length=100)
     created_date_time = models.DateTimeField(auto_now_add=True)
 

@@ -7,7 +7,6 @@ from rest_framework.decorators import action
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
 from django.db.models import Avg
-from django.contrib.auth.models import User
 from .serializers import (
     SongSerializer,
     ArtistSerializer,
@@ -18,7 +17,7 @@ from .serializers import (
     CommentForSongSerializer,
     CommentForUserSerializer
 )
-from .models import Song, Artist, Playlist, Rating, Comment
+from .models import Song, Artist, Playlist, Rating, Comment, ApplicationUser
 from .permissions import IsOwner
 from .paginations import PageNumberAndPageSizePagination
 from .filters import NotNoneValuesLargerOrderingFilter
@@ -83,14 +82,14 @@ class MyTokenObtainPairView(TokenObtainPairView):
 
 
 class SignupViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+    queryset = ApplicationUser.objects.all()
     serializer_class = UserSerializer
     http_method_names = ["post"]
     permission_classes = (AllowAny,)
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
+    queryset = ApplicationUser.objects.all()
     serializer_class = UserSerializer
     http_method_names = []
 
