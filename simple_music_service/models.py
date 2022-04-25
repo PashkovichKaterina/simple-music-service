@@ -35,11 +35,11 @@ class DatabaseAuditMixin(LifecycleModelMixin):
                 through_instances = set(getattr(field.model, field.name).through.objects.filter(**filter_parameters))
                 self._initial_m2m_values.update({key: through_instances})
             else:
-                before_values = self._initial_m2m_values[key]
-                after_values = set(getattr(field.model, field.name).through.objects.filter(**filter_parameters))
-                if before_values != after_values:
-                    deleted_instances = before_values.difference(after_values)
-                    added_instances = after_values.difference(before_values)
+                before_instances = self._initial_m2m_values[key]
+                after_instances = set(getattr(field.model, field.name).through.objects.filter(**filter_parameters))
+                if before_instances != after_instances:
+                    deleted_instances = before_instances.difference(after_instances)
+                    added_instances = after_instances.difference(before_instances)
                     for instance in deleted_instances:
                         for instance_field in instance._meta.get_fields():
                             self._save_audit_data(instance=instance, field=instance_field,
