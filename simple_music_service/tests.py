@@ -8,7 +8,7 @@ import boto3
 from .serializers import (ArtistSerializer, SongSerializer, PlaylistSerializer, CommentForSongSerializer,
                           CommentForUserSerializer)
 from .test_factories import ArtistFactory, UserFactory, SongFactory, PlaylistFactory, RatingFactory, CommentFactory
-from .models import Artist, Playlist, Rating, Comment, Song, ApplicationUser
+from .models import Artist, Playlist, Rating, Comment, Song, ApplicationUser, DatabaseAudit
 
 
 class ArtistViewSetTest(APITestCase):
@@ -559,3 +559,118 @@ class CommentViewSetTest(APITestCase):
 def authorization(client, user):
     access = AccessToken.for_user(user)
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+
+class DataBaseAuditTestCase(APITestCase):
+    @classmethod
+    @mock_s3
+    def setUpTestData(cls):
+        cls.bucket_name = "simple-music-service-storage"
+        s3 = boto3.resource("s3", region_name="us-east-1")
+        s3.create_bucket(Bucket=cls.bucket_name)
+        cls.users = UserFactory.create_batch(size=2)
+        cls.songs = SongFactory.create_batch(size=2)
+        cls.artists = ArtistFactory.create_batch(size=2)
+
+    @mock_s3
+    def test_audit_for_create_event(self):
+        subtest_params = [
+            (Artist, {"name": "artist test name"}, ("id", "name"), {}, ()),
+            (Rating, {"song_id": self.songs[0].id, "user_id": self.users[0].id, "mark": 4},
+             ("id", "song_id", "user_id", "mark"), {}, ()),
+            (Comment, {"song_id": self.songs[0].id, "user_id": self.users[0].id, "message": "test comment"},
+             ("id", "song_id", "user_id", "message", "created_date_time"), {}, ()),
+            (Playlist, {"title": "test playlist title", "user_id": self.users[0].id},
+             ("id", "title", "user_id"), {"song": self.songs}, ("id", "playlist_id", "song_id")),
+            (Song,
+             {"title": "test song title", "year": "2020-12-12", "user_id": self.users[0].id, "lyrics": "test lyrics"},
+             ("id", "title", "year", "user_id", "lyrics"), {"artist": self.artists}, ("id", "song_id", "artist_id")),
+        ]
+        for model, instance_data, instance_attributes, related_data, through_attributes in subtest_params:
+            with self.subTest():
+                created_instance = model.objects.create(**instance_data)
+                for attribute in instance_attributes:
+                    self.is_exist_record(created_instance, attribute, new_value=getattr(created_instance, attribute))
+
+                if len(through_attributes) > 0:
+                    through_field = list(related_data.keys())[0]
+                    getattr(created_instance, through_field).set(related_data[through_field])
+                    created_instance.save()
+                    filter_parameters = {created_instance._meta.model_name: created_instance.id}
+                    through_instances = getattr(created_instance, through_field).through.objects \
+                        .filter(**filter_parameters)
+
+                    for through in through_instances:
+                        for attribute in through_attributes:
+                            self.is_exist_record(through, attribute, new_value=getattr(through, attribute))
+
+    def is_exist_record(self, instance, attribute, *, record_id=None, old_value=None, new_value=None):
+        record_id = instance.id if record_id is None else record_id
+        filter_params = {"table": instance._meta.db_table, "record_id": record_id,
+                         "column_name": attribute, "old_value": old_value, "new_value": new_value}
+        self.assertTrue(DatabaseAudit.objects.filter(**filter_params).exists())
+
+    @mock_s3
+    def test_audit_for_delete_event(self):
+        subtest_params = [
+            (Artist, {"name": "artist test name"}, ("id", "name"), {}, ()),
+            (Rating, {"song_id": self.songs[0].id, "user_id": self.users[0].id, "mark": 4},
+             ("id", "song_id", "user_id", "mark"), {}, ()),
+            (Comment, {"song_id": self.songs[0].id, "user_id": self.users[0].id, "message": "test comment"},
+             ("id", "song_id", "user_id", "message", "created_date_time"), {}, ()),
+            (Playlist, {"title": "test playlist title", "user_id": self.users[0].id},
+             ("id", "title", "user_id"), {"song": self.songs}, ("playlist_id", "song_id")),
+            (Song,
+             {"title": "test song title", "year": "2020-12-12", "user_id": self.users[0].id, "lyrics": "test lyrics"},
+             ("id", "title", "year", "user_id", "lyrics"), {"artist": self.artists}, ("song_id", "artist_id")),
+        ]
+        for model, instance_data, instance_attributes, related_data, through_attributes in subtest_params:
+            with self.subTest():
+                instance = model.objects.create(**instance_data)
+                instance_id = instance.id
+
+                if len(through_attributes) > 0:
+                    through_field = list(related_data.keys())[0]
+                    getattr(instance, through_field).set(related_data[through_field])
+                    instance.save()
+
+                    filter_parameters = {instance._meta.model_name: instance.id}
+                    through_instances = getattr(instance, through_field).through.objects.filter(**filter_parameters)
+
+                instance.delete()
+                for attribute in instance_attributes:
+                    old_value = instance_id if attribute == "id" else getattr(instance, attribute)
+                    self.is_exist_record(instance, attribute, record_id=instance_id, old_value=old_value)
+
+                if len(through_attributes) > 0:
+                    for through in through_instances:
+                        for attribute in through_attributes:
+                            self.is_exist_record(through, attribute, new_value=getattr(through, attribute))
+
+    @mock_s3
+    def test_audit_for_update_event(self):
+        subtest_params = [
+            (Artist, {"name": "artist test name"}, {"name": "new artist name"}, ("name",)),
+            (Rating, {"song_id": self.songs[0].id, "user_id": self.users[0].id, "mark": 4},
+             {"song_id": self.songs[1].id, "user_id": self.users[1].id, "mark": 2},
+             ("song_id", "user_id", "mark")),
+            (Comment, {"song_id": self.songs[0].id, "user_id": self.users[0].id, "message": "test comment"},
+             {"song_id": self.songs[1].id, "user_id": self.users[1].id, "message": "new comment"},
+             ("song_id", "user_id", "message")),
+            (Playlist, {"title": "test playlist title", "user_id": self.users[0].id},
+             {"title": "new playlist title", "user_id": self.users[1].id}, ("title", "user_id")),
+            (Song,
+             {"title": "test song title", "year": "2020-12-12", "user_id": self.users[0].id, "lyrics": "test lyrics"},
+             {"title": "new song title", "year": "2021-12-12", "user_id": self.users[1].id, "lyrics": "new lyrics"},
+             ("title", "year", "user_id", "lyrics")),
+        ]
+        for model, instance_created_data, instance_updated_data, instance_attributes in subtest_params:
+            with self.subTest():
+                instance = model.objects.create(**instance_created_data)
+                for attr, value in instance_updated_data.items():
+                    setattr(instance, attr, value)
+                instance.save()
+
+                for attribute in instance_attributes:
+                    self.is_exist_record(instance, attribute, old_value=instance_created_data[attribute],
+                                         new_value=instance_updated_data[attribute])
