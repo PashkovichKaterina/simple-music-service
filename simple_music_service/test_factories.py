@@ -1,7 +1,6 @@
 from factory.django import DjangoModelFactory, FileField
 from factory import Sequence, SubFactory, post_generation, PostGenerationMethodCall
-from django.contrib.auth.models import User
-from .models import Artist, Song, Playlist, Rating, Comment
+from .models import Artist, Song, Playlist, Rating, Comment, ApplicationUser
 
 
 class ArtistFactory(DjangoModelFactory):
@@ -13,7 +12,7 @@ class ArtistFactory(DjangoModelFactory):
 
 class UserFactory(DjangoModelFactory):
     class Meta:
-        model = User
+        model = ApplicationUser
 
     username = Sequence(lambda n: f"username{n}")
     password = PostGenerationMethodCall("set_password", "test password")

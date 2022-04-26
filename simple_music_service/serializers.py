@@ -1,8 +1,7 @@
 from backend import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from django.contrib.auth.models import User
-from .models import Song, Artist, Playlist, Rating, Comment
+from .models import Song, Artist, Playlist, Rating, Comment, ApplicationUser
 from .exceptions import AlreadyExistingObjectException
 from .mixins import UserMarkMixin
 from .tasks import send_welcome_email
@@ -78,7 +77,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = ApplicationUser
         fields = ("id", "username", "password", "email", "first_name", "last_name")
         extra_kwargs = {
             "password": {"write_only": True},

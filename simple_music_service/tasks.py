@@ -7,7 +7,7 @@ import requests
 import logging
 from .models import Song
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("django")
 
 
 @app.task

@@ -25,6 +25,7 @@ watchtower = "^3.0.0"
 launchdarkly-server-sdk = "^7.4.0"
 SpeechRecognition = "^3.8.1"
 pydub = "^0.25.1"
+django-lifecycle = "^0.9.6"
 
 [tool.poetry.dev-dependencies]
 
