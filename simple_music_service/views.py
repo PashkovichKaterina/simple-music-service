@@ -23,6 +23,8 @@ from .paginations import PageNumberAndPageSizePagination
 from .filters import NotNoneValuesLargerOrderingFilter
 from .feature_flags import get_feature_flag_value
 from .tasks import recognize_speech_from_file
+from django.http import HttpResponse
+from .archive_data import get_archive_with_user_data
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -91,7 +93,14 @@ class SignupViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = ApplicationUser.objects.all()
     serializer_class = UserSerializer
-    http_method_names = []
+    http_method_names = ["get"]
+
+    @action(methods=["get"], detail=True, url_path="archive_data", url_name="archive_data")
+    def archive_data(self, request, pk=None):
+        archive = get_archive_with_user_data(pk)
+        response = HttpResponse(archive, content_type="application/zip")
+        response["Content-Disposition"] = "attachment; filename=data.zip"
+        return response
 
 
 class PlaylistViewSet(viewsets.ModelViewSet):
