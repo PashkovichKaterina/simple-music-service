@@ -86,20 +86,22 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def create(self, *args, **kwargs):
-        user = self.__save_user(super().create, *args, **kwargs)
+        user_data = args[0]
+        user = ApplicationUser(**user_data)
+        self.__save_user(user)
         send_welcome_email.delay(user.email)
         return user
 
     def update(self, *args, **kwargs):
-        return self.__save_user(super().update, *args, **kwargs)
+        user = super().update(*args, **kwargs)
+        self.__save_user(user)
+        return user
 
     @staticmethod
-    def __save_user(method, *args, **kwargs):
-        user = method(*args, **kwargs)
+    def __save_user(user):
         password = user.password
         user.set_password(password)
         user.save()
-        return user
 
 
 class PlaylistSongSerializer(serializers.ModelSerializer, UserMarkMixin):
