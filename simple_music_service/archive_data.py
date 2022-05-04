@@ -57,10 +57,13 @@ def get_created_playlists_file(user_id):
     created_playlists = Playlist.objects.filter(user=user_id)
     file_data = []
     for playlist in created_playlists:
-        for song in playlist.song.all():
-            playlist_dict = {"identifier": playlist.id, "title": playlist.title, "song_title": song.title,
-                             "song_artist": get_artist_name(song.artist)}
-            file_data.append(playlist_dict)
+        if playlist.song.exists():
+            for song in playlist.song.all():
+                file_data.append({"identifier": playlist.id, "title": playlist.title, "song_title": song.title,
+                                  "song_artist": get_artist_name(song.artist)})
+        else:
+            file_data.append({"identifier": playlist.id, "title": playlist.title, "song_title": "",
+                              "song_artist": ""})
     return get_csv_file(file_header, file_data)
 
 
@@ -150,7 +153,8 @@ def get_song_event_history(user_id, from_date, to_date):
             and audit.{column_name1} = %(user_id)s
         """
         query_params = {"user_id": user_id}
-        add_date_params_to_query(get_songs_query, query_params, from_date, to_date)
+        get_songs_query, query_params = form_query_and_params_with_date(get_songs_query, query_params,
+                                                                        from_date, to_date)
         data = []
         songs = DatabaseAudit.objects.raw(get_songs_query, query_params)
         for song in songs:
@@ -191,7 +195,8 @@ def get_playlist_event_history(user_id, from_date, to_date):
             and audit.column_name = 'playlist_id' and audit.{column_name} = %(playlist_id)s
         """
         query_params = {"playlist_id": playlist_id}
-        add_date_params_to_query(get_playlist_song_query, query_params, from_date, to_date)
+        get_playlist_song_query, query_params = form_query_and_params_with_date(get_playlist_song_query, query_params,
+                                                                                from_date, to_date)
         data = []
         songs = DatabaseAudit.objects.raw(get_playlist_song_query, query_params)
         for song in songs:
@@ -220,7 +225,8 @@ def get_playlist_event_history(user_id, from_date, to_date):
             and audit.{column_name1} = %(user_id)s
             """
         query_params = {"user_id": user_id}
-        add_date_params_to_query(get_playlists_query, query_params, from_date, to_date)
+        get_playlists_query, query_params = form_query_and_params_with_date(get_playlists_query, query_params,
+                                                                            from_date, to_date)
         data = []
         playlists = DatabaseAudit.objects.raw(get_playlists_query, query_params)
         for playlist in playlists:
@@ -263,7 +269,8 @@ def get_rating_event_history(user_id, from_date, to_date):
         and song_title.column_name = 'title' and song_title.new_value is NOT NULL and audit.new_value = %(user_id)s
     """
     query_params = {"user_id": user_id}
-    add_date_params_to_query(get_ratings_query, query_params, from_date, to_date)
+    get_ratings_query, query_params = form_query_and_params_with_date(get_ratings_query, query_params,
+                                                                      from_date, to_date)
     data = []
     ratings = DatabaseAudit.objects.raw(get_ratings_query, query_params)
     for rating in ratings:
@@ -306,7 +313,8 @@ def get_comment_event_history(user_id, from_date, to_date):
         and song_title.column_name = 'title' and song_title.new_value is NOT NULL and audit.new_value = %(user_id)s
     """
     query_params = {"user_id": user_id}
-    add_date_params_to_query(get_comments_query, query_params, from_date, to_date)
+    get_comments_query, query_params = form_query_and_params_with_date(get_comments_query, query_params,
+                                                                       from_date, to_date)
     data = []
     comments = DatabaseAudit.objects.raw(get_comments_query, query_params)
     for comment in comments:
@@ -327,13 +335,14 @@ def get_comment_event_history(user_id, from_date, to_date):
     return data
 
 
-def add_date_params_to_query(query, query_params, from_date, to_date):
+def form_query_and_params_with_date(query, query_params, from_date, to_date):
     if from_date:
         query += " and audit.created_date_time > %(from_date)s"
         query_params["from_date"] = from_date
     if to_date:
         query += " and audit.created_date_time < %(to_date)s"
         query_params["to_date"] = to_date
+    return query, query_params
 
 
 def add_date_params_to_filter(filter_params, from_date, to_date):

@@ -68,7 +68,7 @@ class NestedSongViewSet(SongViewSet):
     def destroy(self, request, *args, **kwargs):
         is_delete_song_available = get_feature_flag_value("isDeleteSongAvailable")
         if is_delete_song_available:
-            super().destroy(request, *args, **kwargs)
+            return super().destroy(request, *args, **kwargs)
         else:
             response = {"detail": "Method \"DELETE\" not allowed."}
             return Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
