@@ -132,22 +132,27 @@ class PlaylistSerializer(serializers.ModelSerializer):
         validated_data["user_id"] = user_id
         song_data = validated_data.pop("song")
         playlist = Playlist.objects.create(**validated_data)
-        self.__save_song(playlist, song_data)
+        new_song_id = {song["id"] for song in song_data}
+        self.__update_song_data(playlist, "add", new_song_id)
+        playlist.save()
         return playlist
 
     def update(self, instance, validated_data):
         song_data = validated_data.pop("song")
         instance = super().update(instance, validated_data)
-        instance.song.clear()
-        self.__save_song(instance, song_data)
+        new_song_id = {song["id"] for song in song_data}
+        old_song_id = {song.id for song in instance.song.all()}
+        deleted_songs = old_song_id.difference(new_song_id)
+        added_songs = new_song_id.difference(old_song_id)
+        self.__update_song_data(instance, "add", added_songs)
+        self.__update_song_data(instance, "remove", deleted_songs)
+        instance.save()
         return instance
 
     @staticmethod
-    def __save_song(instance, song_data):
+    def __update_song_data(instance, method, song_data):
         for song in song_data:
-            song = Song.objects.get(**song)
-            instance.song.add(song)
-        instance.save()
+            getattr(instance.song, method)(song)
 
 
 class CommentForSongSerializer(serializers.ModelSerializer):
