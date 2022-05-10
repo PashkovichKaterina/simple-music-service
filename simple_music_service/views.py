@@ -97,8 +97,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(methods=["get"], detail=True, url_path="archive_data", url_name="archive_data")
     def archive_data(self, request, pk=None):
-        from_date = request.query_params["from"] if "from" in request.query_params else None
-        to_date = request.query_params["to"] if "to" in request.query_params else None
+        from_date = request.query_params.get("from")
+        to_date = request.query_params.get("to")
         archive = get_archive_with_user_data(pk, from_date, to_date)
         response = HttpResponse(archive, content_type="application/zip")
         response["Content-Disposition"] = "attachment; filename=data.zip"
