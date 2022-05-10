@@ -23,6 +23,8 @@ from .paginations import PageNumberAndPageSizePagination
 from .filters import NotNoneValuesLargerOrderingFilter
 from .feature_flags import get_feature_flag_value
 from .tasks import recognize_speech_from_file
+from django.http import HttpResponse
+from .archive_data import get_archive_with_user_data
 
 
 class SongViewSet(viewsets.ModelViewSet):
@@ -66,7 +68,7 @@ class NestedSongViewSet(SongViewSet):
     def destroy(self, request, *args, **kwargs):
         is_delete_song_available = get_feature_flag_value("isDeleteSongAvailable")
         if is_delete_song_available:
-            super().destroy(request, *args, **kwargs)
+            return super().destroy(request, *args, **kwargs)
         else:
             response = {"detail": "Method \"DELETE\" not allowed."}
             return Response(response, status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -91,7 +93,16 @@ class SignupViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = ApplicationUser.objects.all()
     serializer_class = UserSerializer
-    http_method_names = []
+    http_method_names = ["get"]
+
+    @action(methods=["get"], detail=True, url_path="archive_data", url_name="archive_data")
+    def archive_data(self, request, pk=None):
+        from_date = request.query_params.get("from")
+        to_date = request.query_params.get("to")
+        archive = get_archive_with_user_data(pk, from_date, to_date)
+        response = HttpResponse(archive, content_type="application/zip")
+        response["Content-Disposition"] = "attachment; filename=data.zip"
+        return response
 
 
 class PlaylistViewSet(viewsets.ModelViewSet):
