@@ -112,7 +112,11 @@ class ApplicationUser(DatabaseAuditMixin, User):
 
 
 class Artist(DatabaseAuditMixin, SoftDeleteModel):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["name"], name="unique_artist_name",
+                                               condition=models.Q(deleted_date_time__isnull=True))]
 
 
 class Song(DatabaseAuditMixin, SoftDeleteModel):
