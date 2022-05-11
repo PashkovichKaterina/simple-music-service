@@ -117,7 +117,7 @@ class Artist(DatabaseAuditMixin, SoftDeleteModel):
 
 class Song(DatabaseAuditMixin, SoftDeleteModel):
     title = models.CharField(max_length=50)
-    artist = models.ManyToManyField(Artist)
+    artist = models.ManyToManyField(Artist, through="ArtistSong")
     year = models.DateField()
     location = models.FileField(
         validators=[FileExtensionValidator(allowed_extensions=["mp3"])]
@@ -138,10 +138,26 @@ class Song(DatabaseAuditMixin, SoftDeleteModel):
         self.location.delete(save=False)
 
 
+class ArtistSong(DatabaseAuditMixin, SoftDeleteModel):
+    song = models.ForeignKey(Song, on_delete=models.CASCADE)
+    artist = models.ForeignKey(Artist, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "simple_music_service_artist_song"
+
+
 class Playlist(DatabaseAuditMixin, SoftDeleteModel):
     title = models.CharField(max_length=50)
     user = models.ForeignKey(ApplicationUser, on_delete=models.CASCADE)
-    song = models.ManyToManyField(Song)
+    song = models.ManyToManyField(Song, through="SongPlaylist")
+
+
+class SongPlaylist(DatabaseAuditMixin, SoftDeleteModel):
+    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE)
+    song = models.ForeignKey(Song, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "simple_music_service_song_playlist"
 
 
 class Rating(DatabaseAuditMixin, SoftDeleteModel):
