@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 from django_lifecycle import hook, LifecycleModelMixin, AFTER_CREATE, AFTER_UPDATE, BEFORE_DELETE
 import logging
+import datetime
+from .managers import SoftDeleteManager
 
 logger = logging.getLogger("django")
 
@@ -90,16 +92,30 @@ class DatabaseAuditMixin(LifecycleModelMixin):
                                      old_value=old_value, new_value=new_value)
 
 
+class SoftDeleteModel(models.Model):
+    deleted_date_time = models.DateTimeField(null=True, default=None)
+    objects = SoftDeleteManager()
+    all_objects = models.Manager()
+
+    def delete(self, using=None, keep_parents=False):
+        logger.info(f"Delete object {self}")
+        self.deleted_date_time = datetime.datetime.now()
+        self.save()
+
+    class Meta:
+        abstract = True
+
+
 class ApplicationUser(DatabaseAuditMixin, User):
     class Meta:
         proxy = True
 
 
-class Artist(DatabaseAuditMixin, models.Model):
+class Artist(DatabaseAuditMixin, SoftDeleteModel):
     name = models.CharField(max_length=50, unique=True)
 
 
-class Song(DatabaseAuditMixin, models.Model):
+class Song(DatabaseAuditMixin, SoftDeleteModel):
     title = models.CharField(max_length=50)
     artist = models.ManyToManyField(Artist)
     year = models.DateField()
@@ -122,13 +138,13 @@ class Song(DatabaseAuditMixin, models.Model):
         self.location.delete(save=False)
 
 
-class Playlist(DatabaseAuditMixin, models.Model):
+class Playlist(DatabaseAuditMixin, SoftDeleteModel):
     title = models.CharField(max_length=50)
     user = models.ForeignKey(ApplicationUser, on_delete=models.CASCADE)
     song = models.ManyToManyField(Song)
 
 
-class Rating(DatabaseAuditMixin, models.Model):
+class Rating(DatabaseAuditMixin, SoftDeleteModel):
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
     user = models.ForeignKey(ApplicationUser, on_delete=models.CASCADE)
     mark = models.IntegerField(
@@ -139,7 +155,7 @@ class Rating(DatabaseAuditMixin, models.Model):
         constraints = [models.UniqueConstraint(fields=["song", "user"], name="unique_song_user_rate")]
 
 
-class Comment(DatabaseAuditMixin, models.Model):
+class Comment(DatabaseAuditMixin, SoftDeleteModel):
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
     user = models.ForeignKey(ApplicationUser, null=True, on_delete=models.SET_NULL)
     message = models.CharField(max_length=100)
